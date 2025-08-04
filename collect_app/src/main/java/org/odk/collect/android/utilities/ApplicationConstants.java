@@ -20,35 +20,18 @@ import com.google.zxing.integration.android.IntentIntegrator;
 
 public class ApplicationConstants {
 
-    // based on http://www.sqlite.org/limits.html
-    public static final int SQLITE_MAX_VARIABLE_NUMBER = 999;
-
-    static final String[] TRANSLATIONS_AVAILABLE = {"af", "am", "ar", "bg", "bn", "ca", "cs", "da",
-            "de", "en", "es", "et", "fa", "fi", "fr", "hi", "in", "it", "ja", "ka", "km", "ln", "lo_LA",
-            "lt", "mg", "ml", "mr", "ms", "my", "ne_NP", "nl", "no", "pl", "ps", "pt", "ro", "ru", "rw",
-            "si", "sl", "so", "sq", "sr", "sv_SE", "sw", "sw_KE", "te", "th_TH", "ti", "tl", "tr",
-            "uk", "ur", "ur_PK", "vi", "zh", "zu"};
-
     private ApplicationConstants() {
 
     }
 
     public abstract static class BundleKeys {
-        public static final String FORM_MODE = "formMode";
         public static final String SUCCESS_KEY = "SUCCESSFUL";
-        public static final String ERROR_REASON = "ERROR_MSG";
         public static final String FORM_IDS = "FORM_IDS";
         public static final String MESSAGE = "MESSAGE";
-        public static final String FORM_ID = "FORM_ID";
         public static final String USERNAME = "USERNAME";
         public static final String PASSWORD = "PASSWORD";
         public static final String URL = "URL";
         public static final String DELETE_INSTANCE_AFTER_SUBMISSION = "DELETE_INSTANCE_AFTER_SUBMISSION";
-    }
-
-    public abstract static class FormModes {
-        public static final String EDIT_SAVED = "editSaved";
-        public static final String VIEW_SENT = "viewSent";
     }
 
     public abstract static class SortingOrder {
@@ -88,10 +71,7 @@ public class ApplicationConstants {
         public static final int EX_IMAGE_CHOOSER  = 25;
         public static final int EX_AUDIO_CHOOSER  = 26;
         public static final int CHANGE_SETTINGS = 27;
-
-        public static final int FORMS_UPLOADED_NOTIFICATION = 97;
-        public static final int FORMS_DOWNLOADED_NOTIFICATION = 98;
-        public static final int FORM_UPDATES_AVAILABLE_NOTIFICATION = 99;
+        public static final int MEDIA_FILE_PATH = 28;
     }
 
     public abstract static class Namespaces {

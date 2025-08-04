@@ -8,11 +8,13 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import androidx.appcompat.content.res.AppCompatResources
-import androidx.fragment.app.Fragment
+import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.viewmodel.viewModelFactory
+import androidx.startup.AppInitializer
 import com.google.android.gms.location.LocationListener
-import com.mapbox.android.core.location.LocationEngineProvider
-import com.mapbox.android.core.location.LocationEngineRequest
+import com.mapbox.android.gestures.MoveGestureDetector
+import com.mapbox.android.gestures.StandardScaleGestureDetector
 import com.mapbox.geojson.Point
 import com.mapbox.maps.EdgeInsets
 import com.mapbox.maps.MapView
@@ -29,6 +31,7 @@ import com.mapbox.maps.extension.style.sources.addSource
 import com.mapbox.maps.extension.style.sources.generated.RasterSource
 import com.mapbox.maps.extension.style.sources.generated.VectorSource
 import com.mapbox.maps.extension.style.sources.getSource
+import com.mapbox.maps.loader.MapboxMapsInitializer
 import com.mapbox.maps.plugin.LocationPuck2D
 import com.mapbox.maps.plugin.animation.MapAnimationOptions.Companion.mapAnimationOptions
 import com.mapbox.maps.plugin.animation.flyTo
@@ -36,24 +39,35 @@ import com.mapbox.maps.plugin.annotation.annotations
 import com.mapbox.maps.plugin.annotation.generated.PointAnnotationManager
 import com.mapbox.maps.plugin.annotation.generated.PolylineAnnotationManager
 import com.mapbox.maps.plugin.annotation.generated.createPointAnnotationManager
+import com.mapbox.maps.plugin.annotation.generated.createPolygonAnnotationManager
 import com.mapbox.maps.plugin.annotation.generated.createPolylineAnnotationManager
 import com.mapbox.maps.plugin.compass.compass
 import com.mapbox.maps.plugin.gestures.OnMapClickListener
 import com.mapbox.maps.plugin.gestures.OnMapLongClickListener
+import com.mapbox.maps.plugin.gestures.OnMoveListener
+import com.mapbox.maps.plugin.gestures.OnScaleListener
 import com.mapbox.maps.plugin.gestures.addOnMapClickListener
 import com.mapbox.maps.plugin.gestures.addOnMapLongClickListener
+import com.mapbox.maps.plugin.gestures.addOnMoveListener
+import com.mapbox.maps.plugin.gestures.addOnScaleListener
 import com.mapbox.maps.plugin.locationcomponent.location
-import com.mapbox.maps.plugin.scalebar.scalebar
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import org.odk.collect.androidshared.utils.ScreenUtils
+import org.odk.collect.location.LocationClient
+import org.odk.collect.location.LocationClient.LocationClientListener
+import org.odk.collect.maps.LineDescription
 import org.odk.collect.maps.MapFragment
 import org.odk.collect.maps.MapFragment.ErrorListener
 import org.odk.collect.maps.MapFragment.FeatureListener
 import org.odk.collect.maps.MapFragment.PointListener
 import org.odk.collect.maps.MapFragment.ReadyListener
-import org.odk.collect.maps.MapFragmentDelegate
 import org.odk.collect.maps.MapPoint
+import org.odk.collect.maps.MapViewModel
+import org.odk.collect.maps.MapViewModelMapFragment
+import org.odk.collect.maps.PolygonDescription
+import org.odk.collect.maps.Zoom
+import org.odk.collect.maps.ZoomObserver
 import org.odk.collect.maps.layers.MapFragmentReferenceLayerUtils.getReferenceLayerFile
 import org.odk.collect.maps.layers.MbtilesFile
 import org.odk.collect.maps.layers.ReferenceLayerRepository
@@ -67,11 +81,11 @@ import java.io.File
 import java.io.IOException
 
 class MapboxMapFragment :
-    Fragment(),
-    MapFragment,
+    MapViewModelMapFragment(),
     OnMapClickListener,
     OnMapLongClickListener,
-    LocationListener {
+    LocationListener,
+    LocationClientListener {
 
     private lateinit var mapView: MapView
     private lateinit var mapboxMap: MapboxMap
@@ -99,14 +113,16 @@ class MapboxMapFragment :
     private var clientWantsLocationUpdates = false
     private var topStyleLayerId: String? = null
     private val locationCallback = MapboxLocationCallback(this)
-    private var mapFragmentDelegate = MapFragmentDelegate(
-        this,
-        { MapboxMapConfigurator() },
-        { settingsProvider.getUnprotectedSettings() },
-        this::onConfigChanged
-    )
-
-    private var hasCenter = false
+    private val _mapViewModel by viewModels<MapViewModel> {
+        viewModelFactory {
+            addInitializer(MapViewModel::class) {
+                MapViewModel(
+                    settingsProvider.getUnprotectedSettings(),
+                    settingsProvider.getMetaSettings()
+                )
+            }
+        }
+    }
 
     private val settingsProvider: SettingsProvider by lazy {
         (requireActivity().applicationContext as ObjectProviderHost).getObjectProvider().provide(SettingsProvider::class.java)
@@ -114,6 +130,10 @@ class MapboxMapFragment :
 
     private val referenceLayerRepository: ReferenceLayerRepository by lazy {
         (requireActivity().applicationContext as ObjectProviderHost).getObjectProvider().provide(ReferenceLayerRepository::class.java)
+    }
+
+    private val locationClient: LocationClient by lazy {
+        (requireActivity().applicationContext as ObjectProviderHost).getObjectProvider().provide(LocationClient::class.java)
     }
 
     override fun init(readyListener: ReadyListener?, errorListener: ErrorListener?) {
@@ -132,16 +152,15 @@ class MapboxMapFragment :
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        mapFragmentDelegate.onCreate(savedInstanceState)
+        AppInitializer.getInstance(requireContext()).initializeComponent(MapboxMapsInitializer::class.java)
     }
 
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
-        savedInstanceState: Bundle?,
+        savedInstanceState: Bundle?
     ): View {
         mapView = MapView(inflater.context).apply {
-            scalebar.enabled = false
             compass.position = Gravity.TOP or Gravity.START
             compass.marginTop = 36f
             compass.marginBottom = 36f
@@ -154,6 +173,25 @@ class MapboxMapFragment :
             .apply {
                 addOnMapClickListener(this@MapboxMapFragment)
                 addOnMapLongClickListener(this@MapboxMapFragment)
+                addOnScaleListener(object : OnScaleListener {
+                    override fun onScale(detector: StandardScaleGestureDetector) = Unit
+
+                    override fun onScaleBegin(detector: StandardScaleGestureDetector) = Unit
+
+                    override fun onScaleEnd(detector: StandardScaleGestureDetector) {
+                        val center = MapPoint(cameraState.center.latitude(), cameraState.center.longitude())
+                        getMapViewModel().onUserZoom(center, cameraState.zoom)
+                    }
+                })
+                addOnMoveListener(object : OnMoveListener {
+                    override fun onMove(detector: MoveGestureDetector): Boolean = false
+                    override fun onMoveBegin(detector: MoveGestureDetector) = Unit
+
+                    override fun onMoveEnd(detector: MoveGestureDetector) {
+                        val center = MapPoint(cameraState.center.latitude(), cameraState.center.longitude())
+                        getMapViewModel().onUserMove(center, cameraState.zoom)
+                    }
+                })
             }
 
         polylineAnnotationManager = mapView
@@ -170,16 +208,46 @@ class MapboxMapFragment :
         // If the screen is rotated before the map is ready, this fragment could already be detached,
         // which makes it unsafe to use. Only call the ReadyListener if this fragment is still attached.
         if (mapReadyListener != null && activity != null) {
-            mapFragmentDelegate.onReady()
             mapReadyListener!!.onReady(this)
         }
 
-        return mapView
-    }
+        val mapConfigurator = MapboxMapConfigurator()
+        getMapViewModel().getSettings(mapConfigurator.prefKeys).observe(viewLifecycleOwner) {
+            val newConfig = mapConfigurator.buildConfig(it)
+            onConfigChanged(newConfig)
+        }
 
-    override fun onStart() {
-        super.onStart()
-        mapFragmentDelegate.onStart()
+        getMapViewModel().zoom.observe(viewLifecycleOwner, object : ZoomObserver() {
+            override fun onZoomToPoint(zoom: Zoom.Point) {
+                moveOrAnimateCamera(zoom.point, zoom.animate, zoom.level)
+            }
+
+            override fun onZoomToBox(zoom: Zoom.Box) {
+                val points = zoom.box.map {
+                    Point.fromLngLat(it.longitude, it.latitude, it.altitude)
+                }
+
+                val screenWidth = ScreenUtils.getScreenWidth(context)
+                val screenHeight = ScreenUtils.getScreenHeight(context)
+
+                lifecycleScope.launch {
+                    delay(100L)
+                    mapboxMap.setCamera(
+                        mapboxMap.cameraForCoordinates(
+                            points,
+                            EdgeInsets(
+                                screenHeight / 5.0,
+                                screenWidth / 5.0,
+                                screenHeight / 5.0,
+                                screenWidth / 5.0
+                            )
+                        )
+                    )
+                }
+            }
+        })
+
+        return mapView
     }
 
     override fun onResume() {
@@ -190,16 +258,6 @@ class MapboxMapFragment :
     override fun onPause() {
         super.onPause()
         enableLocationUpdates(false)
-    }
-
-    override fun onStop() {
-        mapFragmentDelegate.onStop()
-        super.onStop()
-    }
-
-    override fun onSaveInstanceState(outState: Bundle) {
-        super.onSaveInstanceState(outState)
-        mapFragmentDelegate.onSaveInstanceState(outState)
     }
 
     override fun onDestroy() {
@@ -229,56 +287,8 @@ class MapboxMapFragment :
         return mapboxMap.cameraState.zoom
     }
 
-    override fun setCenter(center: MapPoint?, animate: Boolean) {
-        center?.let {
-            moveOrAnimateCamera(it, animate)
-        }
-
-        hasCenter = true
-    }
-
-    override fun zoomToPoint(center: MapPoint?, animate: Boolean) {
-        zoomToPoint(center, MapFragment.POINT_ZOOM.toDouble(), animate)
-    }
-
-    override fun zoomToPoint(center: MapPoint?, zoom: Double, animate: Boolean) {
-        center?.let {
-            moveOrAnimateCamera(it, animate, zoom)
-        }
-
-        hasCenter = true
-    }
-
-    override fun zoomToBoundingBox(
-        mapPoints: Iterable<MapPoint>?,
-        scaleFactor: Double,
-        animate: Boolean,
-    ) {
-        mapPoints?.let {
-            val points = mapPoints.map {
-                Point.fromLngLat(it.lon, it.lat, it.alt)
-            }
-
-            val screenWidth = ScreenUtils.getScreenWidth(context)
-            val screenHeight = ScreenUtils.getScreenHeight(context)
-
-            lifecycleScope.launch {
-                delay(100L)
-                mapboxMap.setCamera(
-                    mapboxMap.cameraForCoordinates(
-                        points,
-                        EdgeInsets(
-                            screenHeight / 5.0,
-                            screenWidth / 5.0,
-                            screenHeight / 5.0,
-                            screenWidth / 5.0
-                        )
-                    )
-                )
-            }
-        }
-
-        hasCenter = true
+    override fun getMapViewModel(): MapViewModel {
+        return _mapViewModel
     }
 
     override fun addMarker(markerDescription: MarkerDescription): Int {
@@ -327,39 +337,59 @@ class MapboxMapFragment :
         }
     }
 
-    override fun addDraggablePoly(points: MutableIterable<MapPoint>, closedPolygon: Boolean): Int {
+    override fun addPolyLine(lineDescription: LineDescription): Int {
         val featureId = nextFeatureId++
-        features[featureId] = PolyFeature(
-            requireContext(),
-            pointAnnotationManager,
-            polylineAnnotationManager,
-            featureId,
-            featureClickListener,
-            featureDragEndListener,
-            closedPolygon,
-            points
-        )
+        if (lineDescription.draggable) {
+            features[featureId] = DynamicPolyLineFeature(
+                requireContext(),
+                pointAnnotationManager,
+                polylineAnnotationManager,
+                featureId,
+                featureClickListener,
+                featureDragEndListener,
+                lineDescription
+            )
+        } else {
+            features[featureId] = StaticPolyLineFeature(
+                polylineAnnotationManager,
+                featureId,
+                featureClickListener,
+                lineDescription
+            )
+        }
         return featureId
     }
 
-    override fun appendPointToPoly(featureId: Int, point: MapPoint) {
+    override fun addPolygon(polygonDescription: PolygonDescription): Int {
+        val featureId = nextFeatureId++
+        features[featureId] = StaticPolygonFeature(
+            mapView.annotations.createPolygonAnnotationManager(),
+            polygonDescription,
+            featureClickListener,
+            featureId
+        )
+
+        return featureId
+    }
+
+    override fun appendPointToPolyLine(featureId: Int, point: MapPoint) {
         val feature = features[featureId]
-        if (feature is PolyFeature) {
+        if (feature is DynamicPolyLineFeature) {
             feature.appendPoint(point)
         }
     }
 
-    override fun removePolyLastPoint(featureId: Int) {
+    override fun removePolyLineLastPoint(featureId: Int) {
         val feature = features[featureId]
-        if (feature is PolyFeature) {
+        if (feature is DynamicPolyLineFeature) {
             feature.removeLastPoint()
         }
     }
 
-    override fun getPolyPoints(featureId: Int): List<MapPoint> {
+    override fun getPolyLinePoints(featureId: Int): List<MapPoint> {
         val feature = features[featureId]
-        return if (feature is PolyFeature) {
-            feature.mapPoints
+        return if (feature is LineFeature) {
+            feature.points
         } else {
             emptyList()
         }
@@ -421,10 +451,6 @@ class MapboxMapFragment :
         locationCallback.setRetainMockAccuracy(retainMockAccuracy)
     }
 
-    override fun hasCenter(): Boolean {
-        return hasCenter
-    }
-
     override fun onMapClick(point: Point): Boolean {
         clickListener?.onPoint(MapPoint(point.latitude(), point.longitude()))
 
@@ -442,8 +468,10 @@ class MapboxMapFragment :
 
     override fun onLocationChanged(location: Location) {
         lastLocationFix = MapPoint(
-            location.latitude, location.longitude,
-            location.altitude, location.accuracy.toDouble()
+            location.latitude,
+            location.longitude,
+            location.altitude,
+            location.accuracy.toDouble()
         )
         lastLocationProvider = location.provider
         Timber.i(
@@ -460,22 +488,14 @@ class MapboxMapFragment :
 
     @SuppressWarnings("MissingPermission") // permission checks for location services are handled in widgets
     private fun enableLocationUpdates(enabled: Boolean) {
-        val engine = LocationEngineProvider.getBestLocationEngine(requireContext())
         if (enabled) {
-            Timber.i("Requesting location updates from %s (to %s)", engine, this)
-            engine.requestLocationUpdates(
-                LocationEngineRequest.Builder(1000)
-                    .setPriority(LocationEngineRequest.PRIORITY_HIGH_ACCURACY)
-                    .setMaxWaitTime(5000)
-                    .build(),
-                locationCallback,
-                null
-            )
-            engine.getLastLocation(locationCallback)
+            Timber.i("Starting LocationClient %s (for MapFragment %s)", locationClient, this)
+            locationClient.start(this)
         } else {
-            Timber.i("Stopping location updates from %s (to %s)", engine, this)
-            engine.removeLocationUpdates(locationCallback)
+            Timber.i("Stopping LocationClient %s (for MapFragment %s)", locationClient, this)
+            locationClient.stop()
         }
+
         mapView.location.enabled = enabled
     }
 
@@ -485,16 +505,16 @@ class MapboxMapFragment :
             this.locationPuck = LocationPuck2D(
                 AppCompatResources.getDrawable(
                     requireContext(),
-                    R.drawable.ic_crosshairs,
+                    org.odk.collect.maps.R.drawable.ic_crosshairs
                 )
             )
         }
     }
 
-    private fun moveOrAnimateCamera(point: MapPoint, animate: Boolean, zoom: Double = getZoom()) {
+    private fun moveOrAnimateCamera(point: MapPoint, animate: Boolean, zoom: Double? = getZoom()) {
         mapboxMap.flyTo(
             cameraOptions {
-                center(Point.fromLngLat(point.lon, point.lat, point.alt))
+                center(Point.fromLngLat(point.longitude, point.latitude, point.altitude))
                 zoom(zoom)
             },
             mapAnimationOptions {
@@ -556,7 +576,7 @@ class MapboxMapFragment :
                 tileSet.minZoom(mbtiles.getMetadata("minzoom").toInt())
                 tileSet.maxZoom(mbtiles.getMetadata("maxzoom").toInt())
             } catch (e: NumberFormatException) {
-                /* ignore */
+                // ignore
             }
             var parts = mbtiles.getMetadata("center").split(",").toTypedArray()
             if (parts.size == 3) { // latitude, longitude, zoom
@@ -569,7 +589,7 @@ class MapboxMapFragment :
                         )
                     )
                 } catch (e: NumberFormatException) {
-                    /* ignore */
+                    // ignore
                 }
             }
             parts = mbtiles.getMetadata("bounds").split(",").toTypedArray()
@@ -584,7 +604,7 @@ class MapboxMapFragment :
                         )
                     )
                 } catch (e: NumberFormatException) {
-                    /* ignore */
+                    // ignore
                 }
             }
         } catch (e: MbtilesFile.MbtilesException) {
@@ -603,6 +623,17 @@ class MapboxMapFragment :
         if (mapboxMap.getStyle()?.getSource(source.sourceId) == null) {
             mapboxMap.getStyle()?.addSource(source)
         }
+    }
+
+    override fun onClientStart() {
+        Timber.i("Requesting location updates (to %s)", this)
+        locationClient.requestLocationUpdates(this)
+    }
+
+    override fun onClientStartFailure() {
+    }
+
+    override fun onClientStop() {
     }
 
     companion object {

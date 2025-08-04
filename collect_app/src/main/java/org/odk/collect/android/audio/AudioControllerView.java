@@ -24,10 +24,9 @@ import android.widget.TextView;
 
 import androidx.core.content.ContextCompat;
 
-import com.google.android.material.button.MaterialButton;
-
 import org.odk.collect.android.R;
 import org.odk.collect.android.databinding.AudioControllerLayoutBinding;
+import org.odk.collect.androidshared.ui.multiclicksafe.MultiClickSafeMaterialButton;
 
 import static java.lang.Math.max;
 import static java.lang.Math.min;
@@ -39,7 +38,7 @@ public class AudioControllerView extends FrameLayout {
 
     private final TextView currentDurationLabel;
     private final TextView totalDurationLabel;
-    private final MaterialButton playButton;
+    private final MultiClickSafeMaterialButton playButton;
     private final SeekBar seekBar;
     private final SwipeListener swipeListener;
 
@@ -66,7 +65,11 @@ public class AudioControllerView extends FrameLayout {
         seekBar.setOnSeekBarChangeListener(swipeListener);
 
         binding.play.setOnClickListener(view -> playClicked());
-        binding.remove.setOnClickListener(view -> listener.onRemoveClicked());
+        binding.remove.setOnClickListener(view -> {
+            if (listener != null) {
+                listener.onRemoveClicked();
+            }
+        });
     }
 
     private void playClicked() {

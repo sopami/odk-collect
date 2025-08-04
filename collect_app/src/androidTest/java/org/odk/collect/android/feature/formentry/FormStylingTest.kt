@@ -3,7 +3,6 @@ package org.odk.collect.android.feature.formentry
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.RuleChain
-import org.odk.collect.android.R
 import org.odk.collect.android.support.pages.FormEntryPage
 import org.odk.collect.android.support.pages.MainMenuPage
 import org.odk.collect.android.support.pages.ProjectSettingsPage
@@ -52,16 +51,16 @@ class FormStylingTest {
             .clickSettings()
             .openFormManagement()
             .openShowGuidanceForQuestions()
-            .clickOnString(R.string.guidance_yes)
+            .clickOnString(org.odk.collect.strings.R.string.guidance_yes)
             .pressBack(ProjectSettingsPage())
             .pressBack(MainMenuPage())
             .startBlankForm(FORM_NAME)
             .assertText("Guidance text")
             .clickOptionsIcon()
-            .clickGeneralSettings()
+            .clickProjectSettings()
             .openFormManagement()
             .openShowGuidanceForQuestions()
-            .clickOnString(R.string.guidance_yes_collapsed)
+            .clickOnString(org.odk.collect.strings.R.string.guidance_yes_collapsed)
             .pressBack(ProjectSettingsPage())
             .pressBack(FormEntryPage(FORM_NAME))
             .clickOnText("Hint text")
@@ -76,7 +75,7 @@ class FormStylingTest {
             .clickGoToArrow()
             .clickOnGroup("selectOneQuestions")
             .clickOnQuestion("Select one widget")
-            .assertText("One", "Two", "Three")
+            .assertTexts("One", "Two", "Three")
     }
 
     @Test
@@ -89,7 +88,7 @@ class FormStylingTest {
             .clickOnQuestion("Select one minimal widget")
             .assertText("One")
             .openSelectMinimalDialog()
-            .assertText("One", "Two", "Three")
+            .assertTexts("One", "Two", "Three")
     }
 
     @Test
@@ -111,7 +110,7 @@ class FormStylingTest {
             .clickGoToArrow()
             .clickOnGroup("selectOneQuestions")
             .clickOnQuestion("Select one label widget")
-            .assertText("One", "Two", "Three")
+            .assertTexts("One", "Two", "Three")
     }
 
     @Test
@@ -122,7 +121,7 @@ class FormStylingTest {
             .clickGoToArrow()
             .clickOnGroup("selectOneQuestions")
             .clickOnQuestion("Select one list widget")
-            .assertText("One", "Two", "Three")
+            .assertTexts("One", "Two", "Three")
     }
 
     @Test
@@ -133,7 +132,7 @@ class FormStylingTest {
             .clickGoToArrow()
             .clickOnGroup("selectOneQuestions")
             .clickOnQuestion("Select one likert widget")
-            .assertText("One", "Two", "Three")
+            .assertTexts("One", "Two", "Three")
     }
 
     @Test
@@ -144,7 +143,7 @@ class FormStylingTest {
             .clickGoToArrow()
             .clickOnGroup("selectMultipleQuestions")
             .clickOnQuestion("Select multiple widget")
-            .assertText("One", "Two", "Three")
+            .assertTexts("One", "Two", "Three")
     }
 
     @Test
@@ -157,7 +156,7 @@ class FormStylingTest {
             .clickOnQuestion("Select multiple minimal widget")
             .assertText("One")
             .openSelectMinimalDialog()
-            .assertText("One", "Two", "Three")
+            .assertTexts("One", "Two", "Three")
     }
 
     @Test
@@ -179,7 +178,7 @@ class FormStylingTest {
             .clickGoToArrow()
             .clickOnGroup("selectMultipleQuestions")
             .clickOnQuestion("Select multiple label widget")
-            .assertText("One", "Two", "Three")
+            .assertTexts("One", "Two", "Three")
     }
 
     @Test
@@ -190,7 +189,7 @@ class FormStylingTest {
             .clickGoToArrow()
             .clickOnGroup("selectMultipleQuestions")
             .clickOnQuestion("Select multiple list widget")
-            .assertText("One", "Two", "Three")
+            .assertTexts("One", "Two", "Three")
     }
 
     @Test
@@ -202,7 +201,7 @@ class FormStylingTest {
             .clickOnQuestion("Rank widget")
             .assertText("1. One\n2. Two\n3. Three")
             .clickOnText("Rank items")
-            .assertText("One", "Two", "Three")
+            .assertTexts("One", "Two", "Three")
     }
 
     @Test
@@ -223,7 +222,7 @@ class FormStylingTest {
             .startBlankForm(FORM_NAME)
             .clickGoToArrow()
             .clickOnGroup("selectOneQuestions")
-            .assertText("selectOneQuestions")
+            .assertPath("selectOneQuestions")
             .clickOnQuestion("Select one widget")
             .assertText("selectOneQuestions")
     }

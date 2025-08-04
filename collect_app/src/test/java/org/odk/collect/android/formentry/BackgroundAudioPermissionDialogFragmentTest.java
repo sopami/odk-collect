@@ -14,22 +14,21 @@ import androidx.appcompat.app.AlertDialog;
 import androidx.fragment.app.FragmentActivity;
 import androidx.fragment.app.testing.FragmentScenario;
 import androidx.lifecycle.ViewModel;
+import androidx.lifecycle.ViewModelProvider;
+import androidx.lifecycle.viewmodel.CreationExtras;
 import androidx.test.ext.junit.runners.AndroidJUnit4;
 
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
-import org.odk.collect.analytics.Analytics;
-import org.odk.collect.android.R;
 import org.odk.collect.android.fakes.FakePermissionsProvider;
 import org.odk.collect.android.injection.config.AppDependencyModule;
 import org.odk.collect.android.support.CollectHelpers;
-import org.odk.collect.audiorecorder.recording.AudioRecorder;
+import org.odk.collect.androidshared.ui.FragmentFactoryBuilder;
 import org.odk.collect.fragmentstest.FragmentScenarioLauncherRule;
 import org.odk.collect.permissions.PermissionsChecker;
 import org.odk.collect.permissions.PermissionsProvider;
-import org.odk.collect.settings.SettingsProvider;
 import org.odk.collect.testshared.RobolectricHelpers;
 
 @RunWith(AndroidJUnit4.class)
@@ -38,9 +37,19 @@ public class BackgroundAudioPermissionDialogFragmentTest {
     private BackgroundAudioViewModel backgroundAudioViewModel;
     private FakePermissionsProvider fakePermissionsProvider;
 
+    private final ViewModelProvider.Factory viewModelFactory = new ViewModelProvider.Factory() {
+        @NonNull
+        @Override
+        public <T extends ViewModel> T create(@NonNull Class<T> modelClass, @NonNull CreationExtras extras) {
+            return (T) backgroundAudioViewModel;
+        }
+    };
+
     @Rule
     public FragmentScenarioLauncherRule launcherRule = new FragmentScenarioLauncherRule(
-            R.style.Theme_MaterialComponents
+            new FragmentFactoryBuilder()
+                    .forClass(BackgroundAudioPermissionDialogFragment.class, () -> new BackgroundAudioPermissionDialogFragment(viewModelFactory))
+                    .build()
     );
 
     @Before
@@ -49,18 +58,6 @@ public class BackgroundAudioPermissionDialogFragmentTest {
         fakePermissionsProvider = new FakePermissionsProvider();
 
         CollectHelpers.overrideAppDependencyModule(new AppDependencyModule() {
-
-            @Override
-            public BackgroundAudioViewModel.Factory providesBackgroundAudioViewModelFactory(AudioRecorder audioRecorder, SettingsProvider settingsProvider, PermissionsChecker permissionsChecker, Analytics analytics, FormSessionRepository formSessionRepository) {
-                return new BackgroundAudioViewModel.Factory(audioRecorder, settingsProvider.getUnprotectedSettings(), permissionsChecker, System::currentTimeMillis, formSessionRepository) {
-                    @NonNull
-                    @Override
-                    public <T extends ViewModel> T create(@NonNull Class<T> modelClass) {
-                        return (T) backgroundAudioViewModel;
-                    }
-                };
-            }
-
             @Override
             public PermissionsProvider providesPermissionsProvider(PermissionsChecker permissionsChecker) {
                 return fakePermissionsProvider;
@@ -83,7 +80,7 @@ public class BackgroundAudioPermissionDialogFragmentTest {
             AlertDialog dialog = (AlertDialog) f.getDialog();
 
             Button button = dialog.getButton(DialogInterface.BUTTON_POSITIVE);
-            assertThat(button.getText(), is(f.getString(R.string.ok)));
+            assertThat(button.getText(), is(f.getString(org.odk.collect.strings.R.string.ok)));
 
             fakePermissionsProvider.setPermissionGranted(true);
 

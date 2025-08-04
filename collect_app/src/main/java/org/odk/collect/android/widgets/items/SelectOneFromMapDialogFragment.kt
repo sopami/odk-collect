@@ -8,11 +8,11 @@ import android.view.View
 import android.view.ViewGroup
 import androidx.activity.ComponentDialog
 import androidx.appcompat.widget.Toolbar
-import androidx.core.os.bundleOf
 import androidx.fragment.app.FragmentResultListener
 import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
+import androidx.lifecycle.ViewModelProvider
 import org.javarosa.core.model.FormIndex
 import org.javarosa.core.model.SelectChoice
 import org.javarosa.core.model.data.SelectOneData
@@ -23,32 +23,26 @@ import org.odk.collect.android.databinding.SelectOneFromMapDialogLayoutBinding
 import org.odk.collect.android.formentry.FormEntryViewModel
 import org.odk.collect.android.injection.DaggerUtils
 import org.odk.collect.android.utilities.Appearances
+import org.odk.collect.android.widgets.utilities.GeoWidgetUtils
 import org.odk.collect.androidshared.livedata.MutableNonNullLiveData
 import org.odk.collect.androidshared.livedata.NonNullLiveData
-import org.odk.collect.androidshared.ui.DialogFragmentUtils
 import org.odk.collect.androidshared.ui.FragmentFactoryBuilder
 import org.odk.collect.async.Scheduler
+import org.odk.collect.geo.selection.IconifiedText
 import org.odk.collect.geo.selection.MappableSelectItem
 import org.odk.collect.geo.selection.SelectionMapData
 import org.odk.collect.geo.selection.SelectionMapFragment
 import org.odk.collect.geo.selection.SelectionMapFragment.Companion.REQUEST_SELECT_ITEM
-import org.odk.collect.material.MaterialAlertDialogFragment
-import org.odk.collect.material.MaterialAlertDialogFragment.Companion.ARG_MESSAGE
 import org.odk.collect.material.MaterialFullScreenDialogFragment
-import org.odk.collect.shared.result.Result
-import org.odk.collect.shared.result.Result.Companion.toError
-import org.odk.collect.shared.result.Result.Companion.toSuccess
 import javax.inject.Inject
-import kotlin.math.absoluteValue
 
-class SelectOneFromMapDialogFragment : MaterialFullScreenDialogFragment(), FragmentResultListener {
+class SelectOneFromMapDialogFragment(private val viewModelFactory: ViewModelProvider.Factory) :
+    MaterialFullScreenDialogFragment(), FragmentResultListener {
 
     @Inject
     lateinit var scheduler: Scheduler
 
-    @Inject
-    lateinit var formEntryViewModelFactory: FormEntryViewModel.Factory
-    private val formEntryViewModel: FormEntryViewModel by activityViewModels { formEntryViewModelFactory }
+    private val formEntryViewModel: FormEntryViewModel by activityViewModels { viewModelFactory }
 
     override fun onAttach(context: Context) {
         super.onAttach(context)
@@ -58,24 +52,6 @@ class SelectOneFromMapDialogFragment : MaterialFullScreenDialogFragment(), Fragm
         val selectedIndex = requireArguments().getSerializable(ARG_SELECTED_INDEX) as Int?
         val prompt = formEntryViewModel.getQuestionPrompt(formIndex)
         val selectionMapData = SelectChoicesMapData(resources, scheduler, prompt, selectedIndex)
-
-        selectionMapData.hasInvalidGeometry().observe(this) {
-            if (it != null) {
-                DialogFragmentUtils.showIfNotShowing(
-                    MaterialAlertDialogFragment::class.java,
-                    bundleOf(
-                        ARG_MESSAGE to getString(
-                            R.string.invalid_geometry,
-                            it.label,
-                            it.geometry
-                        )
-                    ),
-                    parentFragmentManager
-                )
-
-                dismiss()
-            }
-        }
 
         childFragmentManager.fragmentFactory = FragmentFactoryBuilder()
             .forClass(SelectionMapFragment::class.java) {
@@ -95,7 +71,7 @@ class SelectOneFromMapDialogFragment : MaterialFullScreenDialogFragment(), Fragm
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
-        savedInstanceState: Bundle?,
+        savedInstanceState: Bundle?
     ): View {
         val binding = SelectOneFromMapDialogLayoutBinding.inflate(inflater)
         return binding.root
@@ -132,14 +108,13 @@ internal class SelectChoicesMapData(
     private val resources: Resources,
     scheduler: Scheduler,
     prompt: FormEntryPrompt,
-    private val selectedIndex: Int?,
+    private val selectedIndex: Int?
 ) : SelectionMapData {
 
     private val mapTitle = MutableLiveData(prompt.longText)
     private val itemCount = MutableNonNullLiveData(0)
     private val items = MutableLiveData<List<MappableSelectItem>?>(null)
     private val isLoading = MutableNonNullLiveData(true)
-    private val invalidGeometry = MutableLiveData<InvalidGeometry?>(null)
 
     init {
         isLoading.value = true
@@ -149,74 +124,103 @@ internal class SelectChoicesMapData(
                 loadItemsFromChoices(prompt.selectChoices, prompt)
             },
             foreground = {
-                when (it) {
-                    is Result.Success -> {
-                        itemCount.value = prompt.selectChoices.size
-                        items.value = it.value
-                        isLoading.value = false
-                    }
-
-                    is Result.Error -> {
-                        invalidGeometry.value = it.value
-                    }
-                }
+                itemCount.value = prompt.selectChoices.size
+                items.value = it
+                isLoading.value = false
             }
         )
     }
 
     private fun loadItemsFromChoices(
         selectChoices: MutableList<SelectChoice>,
-        prompt: FormEntryPrompt,
-    ): Result<List<MappableSelectItem>, InvalidGeometry> {
-        return selectChoices.foldIndexed(emptyList<MappableSelectItem>()) { index, list, selectChoice ->
-            val geometry = selectChoice.getChild("geometry")
+        prompt: FormEntryPrompt
+    ): List<MappableSelectItem> {
+        return selectChoices.foldIndexed(emptyList()) { index, list, selectChoice ->
+            val geometry = selectChoice.getChild(GEOMETRY)
 
             if (geometry != null) {
-                val latitude: Double
-                val longitude: Double
-
                 try {
-                    latitude = geometry.split(" ")[0].toDouble()
-                    longitude = geometry.split(" ")[1].toDouble()
+                    val points = GeoWidgetUtils.parseGeometry(geometry)
+                    if (points.isNotEmpty()) {
+                        val withinBounds = points.all {
+                            GeoWidgetUtils.isWithinMapBounds(it)
+                        }
 
-                    if (latitude.absoluteValue > 90 || longitude.absoluteValue > 180) {
-                        return InvalidGeometry(prompt.getSelectChoiceText(selectChoice), geometry)
-                            .toError()
+                        if (withinBounds) {
+                            val properties = selectChoice.additionalChildren.filter {
+                                it.first != GeojsonFeature.GEOMETRY_CHILD_NAME
+                            }.map {
+                                IconifiedText(null, "${it.first}: ${it.second}")
+                            }
+
+                            if (points.size == 1) {
+                                val markerColor =
+                                    getPropertyValue(selectChoice, MARKER_COLOR)
+                                val markerSymbol =
+                                    getPropertyValue(selectChoice, MARKER_SYMBOL)
+
+                                list + MappableSelectItem.MappableSelectPoint(
+                                    index.toLong(),
+                                    prompt.getSelectChoiceText(selectChoice),
+                                    properties,
+                                    selectChoice.index == selectedIndex,
+                                    point = points[0],
+                                    smallIcon = if (markerSymbol.isNullOrBlank()) org.odk.collect.icons.R.drawable.ic_map_marker_with_hole_small else org.odk.collect.icons.R.drawable.ic_map_marker_small,
+                                    largeIcon = if (markerSymbol.isNullOrBlank()) org.odk.collect.icons.R.drawable.ic_map_marker_with_hole_big else org.odk.collect.icons.R.drawable.ic_map_marker_big,
+                                    color = markerColor,
+                                    symbol = markerSymbol,
+                                    action = IconifiedText(
+                                        org.odk.collect.icons.R.drawable.ic_save,
+                                        resources.getString(org.odk.collect.strings.R.string.select_item)
+                                    )
+                                )
+                            } else if (points.first() != points.last()) {
+                                list + MappableSelectItem.MappableSelectLine(
+                                    index.toLong(),
+                                    prompt.getSelectChoiceText(selectChoice),
+                                    properties,
+                                    selectChoice.index == selectedIndex,
+                                    points = points,
+                                    action = IconifiedText(
+                                        org.odk.collect.icons.R.drawable.ic_save,
+                                        resources.getString(org.odk.collect.strings.R.string.select_item)
+                                    ),
+                                    strokeWidth = getPropertyValue(selectChoice, STROKE_WIDTH),
+                                    strokeColor = getPropertyValue(selectChoice, STROKE)
+                                )
+                            } else {
+                                list + MappableSelectItem.MappableSelectPolygon(
+                                    index.toLong(),
+                                    prompt.getSelectChoiceText(selectChoice),
+                                    properties,
+                                    selectChoice.index == selectedIndex,
+                                    points = points,
+                                    action = IconifiedText(
+                                        org.odk.collect.icons.R.drawable.ic_save,
+                                        resources.getString(org.odk.collect.strings.R.string.select_item)
+                                    ),
+                                    strokeWidth = getPropertyValue(selectChoice, STROKE_WIDTH),
+                                    strokeColor = getPropertyValue(selectChoice, STROKE),
+                                    fillColor = getPropertyValue(selectChoice, FILL)
+                                )
+                            }
+                        } else {
+                            list
+                        }
+                    } else {
+                        list
                     }
-                } catch (e: NumberFormatException) {
-                    return InvalidGeometry(prompt.getSelectChoiceText(selectChoice), geometry)
-                        .toError()
+                } catch (_: NumberFormatException) {
+                    list
                 }
-
-                val properties = selectChoice.additionalChildren.filter {
-                    it.first != GeojsonFeature.GEOMETRY_CHILD_NAME
-                }.map {
-                    MappableSelectItem.IconifiedText(null, "${it.first}: ${it.second}")
-                }
-
-                val markerColor = selectChoice.additionalChildren.firstOrNull { it.first == "marker-color" }?.second
-                val markerSymbol = selectChoice.additionalChildren.firstOrNull { it.first == "marker-symbol" }?.second
-
-                list + MappableSelectItem.WithAction(
-                    index.toLong(),
-                    latitude,
-                    longitude,
-                    if (markerSymbol == null) R.drawable.ic_map_marker_with_hole_small else R.drawable.ic_map_marker_small,
-                    if (markerSymbol == null) R.drawable.ic_map_marker_with_hole_big else R.drawable.ic_map_marker_big,
-                    prompt.getSelectChoiceText(selectChoice),
-                    properties,
-                    MappableSelectItem.IconifiedText(
-                        R.drawable.ic_save,
-                        resources.getString(R.string.select_item)
-                    ),
-                    selectChoice.index == selectedIndex,
-                    markerColor,
-                    markerSymbol
-                )
             } else {
                 list
             }
-        }.toSuccess()
+        }
+    }
+
+    private fun getPropertyValue(selectChoice: SelectChoice, propertyName: String): String? {
+        return selectChoice.additionalChildren.firstOrNull { it.first == propertyName }?.second
     }
 
     override fun isLoading(): NonNullLiveData<Boolean> {
@@ -228,7 +232,7 @@ internal class SelectChoicesMapData(
     }
 
     override fun getItemType(): String {
-        return resources.getString(R.string.choices)
+        return resources.getString(org.odk.collect.strings.R.string.choices)
     }
 
     override fun getItemCount(): NonNullLiveData<Int> {
@@ -239,9 +243,12 @@ internal class SelectChoicesMapData(
         return items
     }
 
-    fun hasInvalidGeometry(): LiveData<InvalidGeometry?> {
-        return invalidGeometry
+    companion object PropertyNames {
+        const val GEOMETRY = "geometry"
+        const val MARKER_COLOR = "marker-color"
+        const val MARKER_SYMBOL = "marker-symbol"
+        const val STROKE = "stroke"
+        const val STROKE_WIDTH = "stroke-width"
+        const val FILL = "fill"
     }
-
-    data class InvalidGeometry(val label: String, val geometry: String)
 }

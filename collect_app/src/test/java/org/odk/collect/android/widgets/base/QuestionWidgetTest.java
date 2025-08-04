@@ -23,10 +23,10 @@ import org.mockito.Mock;
 import org.odk.collect.android.R;
 import org.odk.collect.android.javarosawrapper.FormController;
 import org.odk.collect.android.listeners.WidgetValueChangedListener;
-import org.odk.collect.android.support.CollectHelpers;
 import org.odk.collect.android.support.WidgetTestActivity;
 import org.odk.collect.android.widgets.QuestionWidget;
 import org.odk.collect.android.widgets.interfaces.Widget;
+import org.odk.collect.android.widgets.support.QuestionWidgetHelpers;
 
 import java.util.List;
 import java.util.Random;
@@ -35,7 +35,8 @@ public abstract class QuestionWidgetTest<W extends Widget, A extends IAnswerData
         extends WidgetTest {
 
     protected Random random = new Random();
-    protected Activity activity = CollectHelpers.buildThemedActivity(WidgetTestActivity.class).get();
+    protected Activity activity = QuestionWidgetHelpers.widgetTestActivity();
+    protected QuestionWidget.Dependencies dependencies = QuestionWidgetHelpers.widgetDependencies();
 
     private W widget;
     private W actualWidget;
@@ -49,7 +50,6 @@ public abstract class QuestionWidgetTest<W extends Widget, A extends IAnswerData
     @NonNull
     public abstract W createWidget();
 
-    @NonNull
     public abstract A getNextAnswer();
 
     public A getInitialAnswer() {
@@ -130,7 +130,7 @@ public abstract class QuestionWidgetTest<W extends Widget, A extends IAnswerData
     public void callingClearShouldCallValueChangeListeners() {
         when(formEntryPrompt.getAnswerText()).thenReturn(getInitialAnswer().getDisplayText());
 
-        QuestionWidget widget = (QuestionWidget) getSpyWidget();
+        QuestionWidget widget = (QuestionWidget) getWidget();
         WidgetValueChangedListener valueChangedListener = mockValueChangedListener(widget);
         widget.clearAnswer();
         verify(valueChangedListener).widgetValueChanged(widget);
@@ -141,7 +141,6 @@ public abstract class QuestionWidgetTest<W extends Widget, A extends IAnswerData
         when(formEntryPrompt.isReadOnly()).thenReturn(true);
         QuestionWidget widget = (QuestionWidget) getWidget();
         assertThat(widget.findViewById(R.id.answer_container).getVisibility(), is(View.GONE));
-        assertThat(widget.findViewById(R.id.space_box).getVisibility(), is(View.VISIBLE));
     }
 
     @Test
@@ -150,7 +149,6 @@ public abstract class QuestionWidgetTest<W extends Widget, A extends IAnswerData
         when(formEntryPrompt.getAnswerValue()).thenReturn(getInitialAnswer());
         QuestionWidget widget = (QuestionWidget) getWidget();
         assertThat(widget.findViewById(R.id.answer_container).getVisibility(), is(View.VISIBLE));
-        assertThat(widget.findViewById(R.id.space_box).getVisibility(), is(View.GONE));
     }
 
     // The whole widget should be registered for context menu to support removing answers/groups

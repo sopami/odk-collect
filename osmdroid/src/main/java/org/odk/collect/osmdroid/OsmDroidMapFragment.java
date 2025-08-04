@@ -28,7 +28,6 @@ import android.graphics.drawable.Drawable;
 import android.location.Location;
 import android.os.Bundle;
 import android.os.Handler;
-import android.provider.Settings;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -36,22 +35,27 @@ import android.view.ViewGroup;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.core.content.ContextCompat;
-import androidx.fragment.app.Fragment;
+import androidx.lifecycle.ViewModel;
+import androidx.lifecycle.ViewModelProvider;
 
 import com.google.android.gms.location.LocationListener;
-import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
 import org.odk.collect.androidshared.system.ContextUtils;
 import org.odk.collect.location.LocationClient;
+import org.odk.collect.maps.LineDescription;
 import org.odk.collect.maps.MapConfigurator;
 import org.odk.collect.maps.MapFragment;
-import org.odk.collect.maps.MapFragmentDelegate;
 import org.odk.collect.maps.MapPoint;
+import org.odk.collect.maps.MapViewModel;
+import org.odk.collect.maps.MapViewModelMapFragment;
+import org.odk.collect.maps.PolygonDescription;
+import org.odk.collect.maps.Zoom;
+import org.odk.collect.maps.ZoomObserver;
+import org.odk.collect.maps.layers.MapFragmentReferenceLayerUtils;
+import org.odk.collect.maps.layers.ReferenceLayerRepository;
 import org.odk.collect.maps.markers.MarkerDescription;
 import org.odk.collect.maps.markers.MarkerIconCreator;
 import org.odk.collect.maps.markers.MarkerIconDescription;
-import org.odk.collect.maps.layers.MapFragmentReferenceLayerUtils;
-import org.odk.collect.maps.layers.ReferenceLayerRepository;
 import org.odk.collect.settings.SettingsProvider;
 import org.osmdroid.api.IGeoPoint;
 import org.osmdroid.events.MapListener;
@@ -60,11 +64,14 @@ import org.osmdroid.events.ZoomEvent;
 import org.osmdroid.tileprovider.IRegisterReceiver;
 import org.osmdroid.util.BoundingBox;
 import org.osmdroid.util.GeoPoint;
+import org.osmdroid.views.CustomZoomButtonsController;
 import org.osmdroid.views.MapView;
 import org.osmdroid.views.overlay.MapEventsOverlay;
 import org.osmdroid.views.overlay.Marker;
 import org.osmdroid.views.overlay.Overlay;
+import org.osmdroid.views.overlay.Polygon;
 import org.osmdroid.views.overlay.Polyline;
+import org.osmdroid.views.overlay.ScaleBarOverlay;
 import org.osmdroid.views.overlay.TilesOverlay;
 import org.osmdroid.views.overlay.mylocation.IMyLocationConsumer;
 import org.osmdroid.views.overlay.mylocation.IMyLocationProvider;
@@ -75,6 +82,8 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
+import java.util.stream.StreamSupport;
 
 import javax.inject.Inject;
 
@@ -83,7 +92,7 @@ import timber.log.Timber;
 /**
  * A MapFragment drawn by OSMDroid.
  */
-public class OsmDroidMapFragment extends Fragment implements MapFragment,
+public class OsmDroidMapFragment extends MapViewModelMapFragment implements
         LocationListener, LocationClient.LocationClientListener {
 
     // Bundle keys understood by applyConfig().
@@ -101,13 +110,6 @@ public class OsmDroidMapFragment extends Fragment implements MapFragment,
     @Inject
     SettingsProvider settingsProvider;
 
-    private final MapFragmentDelegate mapFragmentDelegate = new MapFragmentDelegate(
-            this,
-            () -> mapConfigurator,
-            () -> settingsProvider.getUnprotectedSettings(),
-            this::onConfigChanged
-    );
-
     private MapView map;
     private ReadyListener readyListener;
     private PointListener clickListener;
@@ -124,7 +126,8 @@ public class OsmDroidMapFragment extends Fragment implements MapFragment,
     private WebMapService webMapService;
     private File referenceLayerFile;
     private TilesOverlay referenceOverlay;
-    private boolean hasCenter;
+    private boolean isSystemZooming;
+    private MapViewModel mapViewModel;
 
     @Override
     public void init(@Nullable ReadyListener readyListener, @Nullable ErrorListener errorListener) {
@@ -132,22 +135,23 @@ public class OsmDroidMapFragment extends Fragment implements MapFragment,
     }
 
     @Override
-    public void onCreate(@Nullable Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-        mapFragmentDelegate.onCreate(savedInstanceState);
-    }
-
-    @Override
     public void onAttach(@NonNull Context context) {
         super.onAttach(context);
         OsmDroidDependencyComponent component = ((OsmDroidDependencyComponentProvider) context.getApplicationContext()).getOsmDroidDependencyComponent();
         component.inject(this);
-    }
 
-    @Override
-    public void onStart() {
-        super.onStart();
-        mapFragmentDelegate.onStart();
+        ViewModelProvider.Factory viewModelFactory = new ViewModelProvider.Factory() {
+            @NonNull
+            @Override
+            public <T extends ViewModel> T create(@NonNull Class<T> modelClass) {
+                return (T) new MapViewModel(
+                        settingsProvider.getUnprotectedSettings(),
+                        settingsProvider.getMetaSettings()
+                );
+            }
+        };
+
+        mapViewModel = new ViewModelProvider(this, viewModelFactory).get(MapViewModel.class);
     }
 
     @Override
@@ -160,18 +164,6 @@ public class OsmDroidMapFragment extends Fragment implements MapFragment,
     public void onPause() {
         super.onPause();
         enableLocationUpdates(false);
-    }
-
-    @Override
-    public void onStop() {
-        super.onStop();
-        mapFragmentDelegate.onStop();
-    }
-
-    @Override
-    public void onSaveInstanceState(@NonNull Bundle outState) {
-        super.onSaveInstanceState(outState);
-        mapFragmentDelegate.onSaveInstanceState(outState);
     }
 
     @Override
@@ -190,23 +182,44 @@ public class OsmDroidMapFragment extends Fragment implements MapFragment,
             map.setTileSource(webMapService.asOnlineTileSource());
         }
         map.setMultiTouchControls(true);
-        map.setBuiltInZoomControls(true);
+        map.getZoomController().setVisibility(CustomZoomButtonsController.Visibility.NEVER);
         map.setMinZoomLevel(2.0);
-        map.setMaxZoomLevel(22.0);
-        map.getController().setCenter(toGeoPoint(INITIAL_CENTER));
+        map.getController().setCenter(toGeoPoint(MapFragment.Companion.getINITIAL_CENTER()));
         map.getController().setZoom((int) INITIAL_ZOOM);
         map.setTilesScaledToDpi(true);
         map.setFlingEnabled(false);
+        map.getOverlays().add(new ScaleBarOverlay(map));
+        map.addMapListener(new MapListener() {
+
+            private boolean initialized;
+
+            @Override
+            public boolean onZoom(ZoomEvent event) {
+                if (!isSystemZooming) {
+                    mapViewModel.onUserZoom(getCenter(), event.getZoomLevel());
+                }
+                return false;
+            }
+
+            @Override
+            public boolean onScroll(ScrollEvent event) {
+                // Ignore initial scroll event that we get when the map loads
+                if (initialized) {
+                    mapViewModel.onUserMove(getCenter(), event.getSource().getZoomLevelDouble());
+                } else {
+                    initialized = true;
+                }
+
+                return false;
+            }
+        });
         addAttributionAndMapEventsOverlays();
         loadReferenceOverlay();
         addMapLayoutChangeListener(map);
-
-        locationClient.setListener(this);
-
         osmLocationClientWrapper = new OsmLocationClientWrapper(locationClient);
         myLocationOverlay = new MyLocationNewOverlay(osmLocationClientWrapper, map);
         myLocationOverlay.setDrawAccuracyEnabled(true);
-        Drawable drawable = ContextCompat.getDrawable(requireActivity(), R.drawable.ic_crosshairs);
+        Drawable drawable = ContextCompat.getDrawable(requireActivity(), org.odk.collect.maps.R.drawable.ic_crosshairs);
         Bitmap crosshairs = toBitmap(drawable, drawable.getIntrinsicWidth(), drawable.getIntrinsicHeight(), null);
         myLocationOverlay.setDirectionArrow(crosshairs, crosshairs);
         myLocationOverlay.setPersonHotspot(crosshairs.getWidth() / 2.0f, crosshairs.getHeight() / 2.0f);
@@ -216,10 +229,59 @@ public class OsmDroidMapFragment extends Fragment implements MapFragment,
             // could already be detached, which makes it unsafe to use.  Only
             // call the ReadyListener if this fragment is still attached.
             if (readyListener != null && getActivity() != null) {
-                mapFragmentDelegate.onReady();
                 readyListener.onReady(this);
             }
         }, 100);
+
+        mapViewModel.getSettings(mapConfigurator.getPrefKeys()).observe(getViewLifecycleOwner(), settings -> {
+            Bundle newConfig = mapConfigurator.buildConfig(settings);
+            onConfigChanged(newConfig);
+        });
+
+        mapViewModel.getZoom().observe(getViewLifecycleOwner(), new ZoomObserver() {
+            @Override
+            public void onZoomToPoint(@NonNull Zoom.Point zoom) {
+                isSystemZooming = true;
+                map.getController().setZoom((int) Math.round(zoom.getLevel()));
+                map.getController().setCenter(toGeoPoint(zoom.getPoint()));
+                isSystemZooming = false;
+            }
+
+            @Override
+            public void onZoomToBox(@NonNull Zoom.Box zoom) {
+                List<MapPoint> points = zoom.getBox();
+                boolean animate = zoom.getAnimate();
+                Double scaleFactor = zoom.getScaleFactor();
+
+                int count = 0;
+                List<GeoPoint> geoPoints = new ArrayList<>();
+                MapPoint lastPoint = null;
+                for (MapPoint point : points) {
+                    lastPoint = point;
+                    geoPoints.add(toGeoPoint(point));
+                    count++;
+                }
+                if (count == 1) {
+                    zoomToPoint(lastPoint, zoom.getAnimate());
+                } else if (count > 1) {
+                    // TODO(ping): Find a better solution.
+                    // zoomToBoundingBox sometimes fails to zoom correctly, either
+                    // zooming by the correct amount but leaving the bounding box
+                    // off-center, or centering correctly but not zooming in enough.
+                    // Adding a 100-ms delay avoids the problem most of the time, but
+                    // not always; it's here because the old GeoShapeOsmMapActivity
+                    // did it, not because it's known to be the best solution.
+                    final BoundingBox box = BoundingBox.fromGeoPoints(geoPoints)
+                            .increaseByScale((float) (1 / scaleFactor));
+                    new Handler().postDelayed(() -> {
+                        isSystemZooming = true;
+                        map.zoomToBoundingBox(box, animate);
+                        isSystemZooming = false;
+                    }, 100);
+                }
+            }
+        });
+
         return view;
     }
 
@@ -230,69 +292,8 @@ public class OsmDroidMapFragment extends Fragment implements MapFragment,
     }
 
     @Override
-    public void setCenter(@Nullable MapPoint center, boolean animate) {
-        if (center != null) {
-            if (animate) {
-                map.getController().animateTo(toGeoPoint(center));
-            } else {
-                map.getController().setCenter(toGeoPoint(center));
-            }
-        }
-
-        hasCenter = true;
-    }
-
-    @Override
     public double getZoom() {
         return map.getZoomLevel();
-    }
-
-    @Override
-    public void zoomToPoint(@Nullable MapPoint center, boolean animate) {
-        zoomToPoint(center, POINT_ZOOM, animate);
-    }
-
-    @Override
-    public void zoomToPoint(@Nullable MapPoint center, double zoom, boolean animate) {
-        // We're ignoring the 'animate' flag because OSMDroid doesn't provide
-        // support for simultaneously animating the viewport center and zoom level.
-        if (center != null) {
-            // setCenter() must be done last; setZoom() does not preserve the center.
-            map.getController().setZoom((int) Math.round(zoom));
-            map.getController().setCenter(toGeoPoint(center));
-        }
-
-        hasCenter = true;
-    }
-
-    @Override
-    public void zoomToBoundingBox(Iterable<MapPoint> points, double scaleFactor, boolean animate) {
-        if (points != null) {
-            int count = 0;
-            List<GeoPoint> geoPoints = new ArrayList<>();
-            MapPoint lastPoint = null;
-            for (MapPoint point : points) {
-                lastPoint = point;
-                geoPoints.add(toGeoPoint(point));
-                count++;
-            }
-            if (count == 1) {
-                zoomToPoint(lastPoint, animate);
-            } else if (count > 1) {
-                // TODO(ping): Find a better solution.
-                // zoomToBoundingBox sometimes fails to zoom correctly, either
-                // zooming by the correct amount but leaving the bounding box
-                // off-center, or centering correctly but not zooming in enough.
-                // Adding a 100-ms delay avoids the problem most of the time, but
-                // not always; it's here because the old GeoShapeOsmMapActivity
-                // did it, not because it's known to be the best solution.
-                final BoundingBox box = BoundingBox.fromGeoPoints(geoPoints)
-                        .increaseByScale((float) (1 / scaleFactor));
-                new Handler().postDelayed(() -> map.zoomToBoundingBox(box, animate), 100);
-            }
-        }
-
-        hasCenter = true;
     }
 
     @Override
@@ -318,6 +319,7 @@ public class OsmDroidMapFragment extends Fragment implements MapFragment,
         MapFeature feature = features.get(featureId);
         if (feature instanceof MarkerFeature) {
             ((MarkerFeature) feature).setIcon(markerIconDescription);
+            map.invalidate();
         }
     }
 
@@ -329,35 +331,46 @@ public class OsmDroidMapFragment extends Fragment implements MapFragment,
     }
 
     @Override
-    public int addDraggablePoly(@NonNull Iterable<MapPoint> points, boolean closedPolygon) {
+    public int addPolyLine(LineDescription lineDescription) {
         int featureId = nextFeatureId++;
-        features.put(featureId, new PolyFeature(map, points, closedPolygon));
+        if (lineDescription.getDraggable()) {
+            features.put(featureId, new DynamicPolyLineFeature(map, lineDescription));
+        } else {
+            features.put(featureId, new StaticPolyLineFeature(map, lineDescription));
+        }
         return featureId;
     }
 
     @Override
-    public void appendPointToPoly(int featureId, @NonNull MapPoint point) {
+    public int addPolygon(PolygonDescription polygonDescription) {
+        int featureId = nextFeatureId++;
+        features.put(featureId, new StaticPolygonFeature(map, polygonDescription));
+        return featureId;
+    }
+
+    @Override
+    public void appendPointToPolyLine(int featureId, @NonNull MapPoint point) {
         MapFeature feature = features.get(featureId);
-        if (feature instanceof PolyFeature) {
-            ((PolyFeature) feature).addPoint(point);
+        if (feature instanceof DynamicPolyLineFeature) {
+            ((DynamicPolyLineFeature) feature).addPoint(point);
         }
     }
 
     @Override
     public @NonNull
-    List<MapPoint> getPolyPoints(int featureId) {
+    List<MapPoint> getPolyLinePoints(int featureId) {
         MapFeature feature = features.get(featureId);
-        if (feature instanceof PolyFeature) {
-            return ((PolyFeature) feature).getPoints();
+        if (feature instanceof LineFeature) {
+            return ((LineFeature) feature).getPoints();
         }
         return new ArrayList<>();
     }
 
     @Override
-    public void removePolyLastPoint(int featureId) {
+    public void removePolyLineLastPoint(int featureId) {
         MapFeature feature = features.get(featureId);
-        if (feature instanceof PolyFeature) {
-            ((PolyFeature) feature).removeLastPoint();
+        if (feature instanceof DynamicPolyLineFeature) {
+            ((DynamicPolyLineFeature) feature).removeLastPoint();
         }
     }
 
@@ -399,11 +412,6 @@ public class OsmDroidMapFragment extends Fragment implements MapFragment,
     @Override
     public void setRetainMockAccuracy(boolean retainMockAccuracy) {
         locationClient.setRetainMockAccuracy(retainMockAccuracy);
-    }
-
-    @Override
-    public boolean hasCenter() {
-        return hasCenter;
     }
 
     @Override
@@ -459,7 +467,6 @@ public class OsmDroidMapFragment extends Fragment implements MapFragment,
 
     @Override
     public void onClientStartFailure() {
-        showGpsDisabledAlert();
     }
 
     @Override
@@ -467,11 +474,9 @@ public class OsmDroidMapFragment extends Fragment implements MapFragment,
     }
 
     private void enableLocationUpdates(boolean enable) {
-        locationClient.setListener(this);
-
         if (enable) {
             Timber.i("Starting LocationClient %s (for MapFragment %s)", locationClient, this);
-            locationClient.start();
+            locationClient.start(this);
         } else {
             Timber.i("Stopping LocationClient %s (for MapFragment %s)", locationClient, this);
             locationClient.stop();
@@ -530,7 +535,7 @@ public class OsmDroidMapFragment extends Fragment implements MapFragment,
 
     private static @NonNull
     GeoPoint toGeoPoint(@NonNull MapPoint point) {
-        return new GeoPoint(point.lat, point.lon, point.alt);
+        return new GeoPoint(point.latitude, point.longitude, point.altitude);
     }
 
     /**
@@ -539,6 +544,7 @@ public class OsmDroidMapFragment extends Fragment implements MapFragment,
     private void loadReferenceOverlay() {
         if (referenceOverlay != null) {
             map.getOverlays().remove(referenceOverlay);
+            referenceOverlay.onDetach(map);
             referenceOverlay = null;
         }
         if (referenceLayerFile != null) {
@@ -548,19 +554,6 @@ public class OsmDroidMapFragment extends Fragment implements MapFragment,
             map.getOverlays().add(0, referenceOverlay);
         }
         map.invalidate();
-    }
-
-    private void showGpsDisabledAlert() {
-        new MaterialAlertDialogBuilder(getContext())
-                .setMessage(getString(R.string.gps_enable_message))
-                .setCancelable(false)
-                .setPositiveButton(getString(R.string.enable_gps),
-                        (dialog, id) -> startActivityForResult(
-                                new Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS), 0))
-                .setNegativeButton(getString(R.string.cancel),
-                        (dialog, id) -> dialog.cancel())
-                .create()
-                .show();
     }
 
     /**
@@ -596,7 +589,7 @@ public class OsmDroidMapFragment extends Fragment implements MapFragment,
         // somewhere, so it goes in the marker's sub-description field.
         Marker marker = new Marker(map);
         marker.setPosition(toGeoPoint(markerDescription.getPoint()));
-        marker.setSubDescription(Double.toString(markerDescription.getPoint().sd));
+        marker.setSubDescription(Double.toString(markerDescription.getPoint().accuracy));
         marker.setDraggable(markerDescription.isDraggable());
         marker.setIcon(MarkerIconCreator.getMarkerIconDrawable(map.getContext(), markerDescription.getIconDescription()));
         marker.setAnchor(getIconAnchorValueX(markerDescription.getIconAnchor()), getIconAnchorValueY(markerDescription.getIconAnchor()));
@@ -636,7 +629,7 @@ public class OsmDroidMapFragment extends Fragment implements MapFragment,
         return marker;
     }
 
-    private float getIconAnchorValueX(@IconAnchor String iconAnchor) {
+    private float getIconAnchorValueX(@MapFragment.Companion.IconAnchor String iconAnchor) {
         switch (iconAnchor) {
             case BOTTOM:
             default:
@@ -644,7 +637,7 @@ public class OsmDroidMapFragment extends Fragment implements MapFragment,
         }
     }
 
-    private float getIconAnchorValueY(@IconAnchor String iconAnchor) {
+    private float getIconAnchorValueY(@MapFragment.Companion.IconAnchor String iconAnchor) {
         switch (iconAnchor) {
             case BOTTOM:
                 return Marker.ANCHOR_BOTTOM;
@@ -675,6 +668,15 @@ public class OsmDroidMapFragment extends Fragment implements MapFragment,
             }
         }
         return -1;  // not found
+    }
+
+    private int findFeature(Polygon polygon) {
+        for (int featureId : features.keySet()) {
+            if (features.get(featureId).ownsPolygon(polygon)) {
+                return featureId;
+            }
+        }
+        return -1;
     }
 
     private void updateFeature(int featureId) {
@@ -713,6 +715,12 @@ public class OsmDroidMapFragment extends Fragment implements MapFragment,
         }
     }
 
+    @NonNull
+    @Override
+    public MapViewModel getMapViewModel() {
+        return mapViewModel;
+    }
+
     /**
      * A MapFeature is a physical feature on a map, such as a point, a road,
      * a building, a region, etc.  It is presented to the user as one editable
@@ -729,6 +737,8 @@ public class OsmDroidMapFragment extends Fragment implements MapFragment,
          * Returns true if the given polyline belongs to this feature.
          */
         boolean ownsPolyline(Polyline polyline);
+
+        boolean ownsPolygon(Polygon polygon);
 
         /**
          * Updates the feature's geometry after any UI handles have moved.
@@ -769,6 +779,11 @@ public class OsmDroidMapFragment extends Fragment implements MapFragment,
             return false;
         }
 
+        @Override
+        public boolean ownsPolygon(Polygon polygon) {
+            return false;
+        }
+
         public void update() {
         }
 
@@ -778,21 +793,25 @@ public class OsmDroidMapFragment extends Fragment implements MapFragment,
         }
     }
 
+    private interface LineFeature extends MapFeature {
+
+        List<MapPoint> getPoints();
+    }
+
     /**
      * A polyline or polygon that can be manipulated by dragging markers at its vertices.
      */
-    private class PolyFeature implements MapFeature {
+    private class StaticPolyLineFeature implements LineFeature {
         final MapView map;
-        final List<Marker> markers = new ArrayList<>();
         final Polyline polyline;
         final boolean closedPolygon;
-        static final int STROKE_WIDTH = 5;
+        private final List<MapPoint> points;
 
-        PolyFeature(MapView map, Iterable<MapPoint> points, boolean closedPolygon) {
+        StaticPolyLineFeature(MapView map, LineDescription lineDescription) {
             this.map = map;
-            this.closedPolygon = closedPolygon;
+            this.closedPolygon = lineDescription.getClosed();
             polyline = new Polyline();
-            polyline.setColor(map.getContext().getResources().getColor(R.color.mapLineColor));
+            polyline.setColor(lineDescription.getStrokeColor());
             polyline.setOnClickListener((clickedPolyline, mapView, eventPos) -> {
                 int featureId = findFeature(clickedPolyline);
                 if (featureClickListener != null && featureId != -1) {
@@ -802,22 +821,95 @@ public class OsmDroidMapFragment extends Fragment implements MapFragment,
                 return false;
             });
             Paint paint = polyline.getPaint();
-            paint.setStrokeWidth(STROKE_WIDTH);
+            paint.setStrokeWidth(lineDescription.getStrokeWidth());
             map.getOverlays().add(polyline);
-            for (MapPoint point : points) {
-                markers.add(createMarker(map, new MarkerDescription(point, true, CENTER, new MarkerIconDescription(R.drawable.ic_map_point))));
+
+            points = lineDescription.getPoints();
+            List<GeoPoint> geoPoints = StreamSupport.stream(points.spliterator(), false).map(mapPoint -> new GeoPoint(mapPoint.latitude, mapPoint.longitude, mapPoint.altitude)).collect(Collectors.toList());
+            if (closedPolygon && !geoPoints.isEmpty()) {
+                geoPoints.add(geoPoints.get(0));
             }
-            update();
+            polyline.setPoints(geoPoints);
+            map.invalidate();
         }
 
+        @Override
         public boolean ownsMarker(Marker givenMarker) {
-            return markers.contains(givenMarker);
+            return false;
         }
 
+        @Override
         public boolean ownsPolyline(Polyline givenPolyline) {
             return polyline.equals(givenPolyline);
         }
 
+        @Override
+        public boolean ownsPolygon(Polygon polygon) {
+            return false;
+        }
+
+        @Override
+        public void update() {
+        }
+
+        @Override
+        public void dispose() {
+            map.getOverlays().remove(polyline);
+        }
+
+        @Override
+        public List<MapPoint> getPoints() {
+            return points;
+        }
+    }
+
+    /**
+     * A polyline or polygon that can be manipulated by dragging markers at its vertices.
+     */
+    private class DynamicPolyLineFeature implements LineFeature {
+        final MapView map;
+        final List<Marker> markers = new ArrayList<>();
+        final Polyline polyline;
+        final boolean closedPolygon;
+
+        DynamicPolyLineFeature(MapView map, LineDescription lineDescription) {
+            this.map = map;
+            this.closedPolygon = lineDescription.getClosed();
+            polyline = new Polyline();
+            polyline.setColor(lineDescription.getStrokeColor());
+            polyline.setOnClickListener((clickedPolyline, mapView, eventPos) -> {
+                int featureId = findFeature(clickedPolyline);
+                if (featureClickListener != null && featureId != -1) {
+                    featureClickListener.onFeature(featureId);
+                    return true;  // consume the event
+                }
+                return false;
+            });
+            Paint paint = polyline.getPaint();
+            paint.setStrokeWidth(lineDescription.getStrokeWidth());
+            map.getOverlays().add(polyline);
+            for (MapPoint point : lineDescription.getPoints()) {
+                markers.add(createMarker(map, new MarkerDescription(point, true, CENTER, new MarkerIconDescription(org.odk.collect.icons.R.drawable.ic_map_point))));
+            }
+            update();
+        }
+
+        @Override
+        public boolean ownsMarker(Marker givenMarker) {
+            return markers.contains(givenMarker);
+        }
+
+        @Override
+        public boolean ownsPolyline(Polyline givenPolyline) {
+            return polyline.equals(givenPolyline);
+        }
+
+        @Override
+        public boolean ownsPolygon(Polygon polygon) {
+            return false;
+        }
+
+        @Override
         public void update() {
             List<GeoPoint> geoPoints = new ArrayList<>();
             for (Marker marker : markers) {
@@ -830,6 +922,7 @@ public class OsmDroidMapFragment extends Fragment implements MapFragment,
             map.invalidate();
         }
 
+        @Override
         public void dispose() {
             for (Marker marker : markers) {
                 map.getOverlays().remove(marker);
@@ -838,6 +931,7 @@ public class OsmDroidMapFragment extends Fragment implements MapFragment,
             map.getOverlays().remove(polyline);
         }
 
+        @Override
         public List<MapPoint> getPoints() {
             List<MapPoint> points = new ArrayList<>();
             for (Marker marker : markers) {
@@ -847,7 +941,7 @@ public class OsmDroidMapFragment extends Fragment implements MapFragment,
         }
 
         public void addPoint(MapPoint point) {
-            markers.add(createMarker(map, new MarkerDescription(point, true, CENTER, new MarkerIconDescription(R.drawable.ic_map_point))));
+            markers.add(createMarker(map, new MarkerDescription(point, true, CENTER, new MarkerIconDescription(org.odk.collect.icons.R.drawable.ic_map_point))));
             update();
         }
 
@@ -858,6 +952,54 @@ public class OsmDroidMapFragment extends Fragment implements MapFragment,
                 markers.remove(last);
                 update();
             }
+        }
+    }
+
+    private class StaticPolygonFeature implements MapFeature {
+        private final MapView map;
+        private final Polygon polygon = new Polygon();
+
+        StaticPolygonFeature(MapView map, PolygonDescription polygonDescription) {
+            this.map = map;
+
+            map.getOverlays().add(polygon);
+            polygon.getOutlinePaint().setColor(polygonDescription.getStrokeColor());
+            polygon.setStrokeWidth(polygonDescription.getStrokeWidth());
+            polygon.getFillPaint().setColor(polygonDescription.getFillColor());
+            polygon.setPoints(StreamSupport.stream(polygonDescription.getPoints().spliterator(), false).map(point -> new GeoPoint(point.latitude, point.longitude)).collect(Collectors.toList()));
+            polygon.setOnClickListener((polygon, mapView, eventPos) -> {
+                int featureId = findFeature(polygon);
+                if (featureClickListener != null && featureId != -1) {
+                    featureClickListener.onFeature(featureId);
+                    return true;  // consume the event
+                }
+
+                return false;
+            });
+        }
+
+        @Override
+        public boolean ownsMarker(Marker marker) {
+            return false;
+        }
+
+        @Override
+        public boolean ownsPolyline(Polyline polyline) {
+            return false;
+        }
+
+        @Override
+        public boolean ownsPolygon(Polygon polygon) {
+            return polygon.equals(this.polygon);
+        }
+
+        @Override
+        public void update() {
+        }
+
+        @Override
+        public void dispose() {
+            map.getOverlays().remove(polygon);
         }
     }
 
@@ -875,7 +1017,7 @@ public class OsmDroidMapFragment extends Fragment implements MapFragment,
 
             paint = new Paint();
             paint.setAntiAlias(true);
-            paint.setColor(ContextUtils.getThemeAttributeValue(context, R.attr.colorOnSurface));
+            paint.setColor(ContextUtils.getThemeAttributeValue(context, com.google.android.material.R.attr.colorOnSurface));
             paint.setTextSize(FONT_SIZE_DP *
                     context.getResources().getDisplayMetrics().density);
             paint.setTextAlign(Paint.Align.RIGHT);

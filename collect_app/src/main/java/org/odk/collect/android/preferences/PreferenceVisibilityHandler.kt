@@ -17,6 +17,7 @@ package org.odk.collect.android.preferences
 
 import androidx.preference.PreferenceGroup
 import androidx.preference.PreferenceScreen
+import org.odk.collect.android.BuildConfig
 import org.odk.collect.android.version.VersionInformation
 import org.odk.collect.settings.SettingsProvider
 import org.odk.collect.settings.keys.ProjectKeys
@@ -59,7 +60,6 @@ class PreferenceVisibilityHandler(
                         ProtectedProjectKeys.KEY_HIDE_OLD_FORM_VERSIONS,
                         ProtectedProjectKeys.KEY_AUTOSEND,
                         ProtectedProjectKeys.KEY_DELETE_AFTER_SEND,
-                        ProtectedProjectKeys.KEY_DEFAULT_TO_FINALIZED,
                         ProtectedProjectKeys.KEY_CONSTRAINT_BEHAVIOR,
                         ProtectedProjectKeys.KEY_HIGH_RESOLUTION,
                         ProtectedProjectKeys.KEY_IMAGE_SIZE,
@@ -85,7 +85,6 @@ class PreferenceVisibilityHandler(
                 ProjectKeys.KEY_HIDE_OLD_FORM_VERSIONS -> preference.isVisible = state == ProjectPreferencesViewModel.State.UNLOCKED || isOptionEnabled(ProtectedProjectKeys.KEY_HIDE_OLD_FORM_VERSIONS)
                 ProjectKeys.KEY_AUTOSEND -> preference.isVisible = state == ProjectPreferencesViewModel.State.UNLOCKED || isOptionEnabled(ProtectedProjectKeys.KEY_AUTOSEND)
                 ProjectKeys.KEY_DELETE_AFTER_SEND -> preference.isVisible = state == ProjectPreferencesViewModel.State.UNLOCKED || isOptionEnabled(ProtectedProjectKeys.KEY_DELETE_AFTER_SEND)
-                ProjectKeys.KEY_COMPLETED_DEFAULT -> preference.isVisible = state == ProjectPreferencesViewModel.State.UNLOCKED || isOptionEnabled(ProtectedProjectKeys.KEY_DEFAULT_TO_FINALIZED)
                 ProjectKeys.KEY_CONSTRAINT_BEHAVIOR -> preference.isVisible = state == ProjectPreferencesViewModel.State.UNLOCKED || isOptionEnabled(ProtectedProjectKeys.KEY_CONSTRAINT_BEHAVIOR)
                 ProjectKeys.KEY_HIGH_RESOLUTION -> preference.isVisible = state == ProjectPreferencesViewModel.State.UNLOCKED || isOptionEnabled(ProtectedProjectKeys.KEY_HIGH_RESOLUTION)
                 ProjectKeys.KEY_IMAGE_SIZE -> preference.isVisible = state == ProjectPreferencesViewModel.State.UNLOCKED || isOptionEnabled(ProtectedProjectKeys.KEY_IMAGE_SIZE)
@@ -96,7 +95,7 @@ class PreferenceVisibilityHandler(
                 ProjectKeys.KEY_FORM_METADATA -> preference.isVisible = state == ProjectPreferencesViewModel.State.UNLOCKED || isOptionEnabled(ProtectedProjectKeys.KEY_CHANGE_FORM_METADATA)
                 ProjectKeys.KEY_ANALYTICS -> preference.isVisible = state == ProjectPreferencesViewModel.State.UNLOCKED || isOptionEnabled(ProtectedProjectKeys.KEY_ANALYTICS)
 
-                "experimental" -> preference.isVisible = !versionInformation.isRelease
+                "experimental" -> preference.isVisible = !versionInformation.isRelease || BuildConfig.DEBUG
 
                 "admin_password" -> preference.isVisible = state != ProjectPreferencesViewModel.State.LOCKED
                 "project_management" -> preference.isVisible = state != ProjectPreferencesViewModel.State.LOCKED

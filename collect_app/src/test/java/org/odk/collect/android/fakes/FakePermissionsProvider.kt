@@ -2,8 +2,8 @@ package org.odk.collect.android.fakes
 
 import android.app.Activity
 import androidx.test.platform.app.InstrumentationRegistry
+import org.odk.collect.permissions.ContextCompatPermissionChecker
 import org.odk.collect.permissions.PermissionListener
-import org.odk.collect.permissions.PermissionsChecker
 import org.odk.collect.permissions.PermissionsProvider
 
 /**
@@ -13,26 +13,23 @@ import org.odk.collect.permissions.PermissionsProvider
  * @author Shobhit Agarwal
  */
 class FakePermissionsProvider :
-    PermissionsProvider(PermissionsChecker(InstrumentationRegistry.getInstrumentation().targetContext)) {
+    PermissionsProvider(ContextCompatPermissionChecker(InstrumentationRegistry.getInstrumentation().targetContext)) {
     private var isPermissionGranted = false
 
-    var cameraPermissionRequested = false
+    val requestedPermissions = mutableListOf<String>()
 
     override fun requestPermissions(
         activity: Activity,
         listener: PermissionListener,
         vararg permissions: String
     ) {
+        requestedPermissions.addAll(permissions)
+
         if (isPermissionGranted) {
             listener.granted()
         } else {
             listener.denied()
         }
-    }
-
-    override fun requestCameraPermission(activity: Activity, action: PermissionListener) {
-        super.requestCameraPermission(activity, action)
-        cameraPermissionRequested = true
     }
 
     fun setPermissionGranted(permissionGranted: Boolean) {

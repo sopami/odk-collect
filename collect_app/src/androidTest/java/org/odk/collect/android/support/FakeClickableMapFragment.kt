@@ -3,8 +3,10 @@ package org.odk.collect.android.support
 import android.os.Handler
 import android.os.Looper
 import androidx.fragment.app.Fragment
+import org.odk.collect.maps.LineDescription
 import org.odk.collect.maps.MapFragment
 import org.odk.collect.maps.MapPoint
+import org.odk.collect.maps.PolygonDescription
 import org.odk.collect.maps.markers.MarkerDescription
 import org.odk.collect.maps.markers.MarkerIconDescription
 
@@ -15,7 +17,7 @@ class FakeClickableMapFragment : Fragment(), MapFragment {
 
     override fun init(
         readyListener: MapFragment.ReadyListener?,
-        errorListener: MapFragment.ErrorListener?,
+        errorListener: MapFragment.ErrorListener?
     ) {
         readyListener?.onReady(this)
     }
@@ -29,13 +31,16 @@ class FakeClickableMapFragment : Fragment(), MapFragment {
     }
 
     override fun setCenter(center: MapPoint?, animate: Boolean) {}
+    override fun zoomToCurrentLocation(center: MapPoint?) {
+        TODO("Not yet implemented")
+    }
 
     override fun zoomToPoint(center: MapPoint?, animate: Boolean) {}
 
     override fun zoomToPoint(center: MapPoint?, zoom: Double, animate: Boolean) {}
 
     override fun zoomToBoundingBox(
-        points: MutableIterable<MapPoint>?,
+        points: Iterable<MapPoint>,
         scaleFactor: Double,
         animate: Boolean
     ) {}
@@ -57,15 +62,19 @@ class FakeClickableMapFragment : Fragment(), MapFragment {
         return MapPoint(0.0, 0.0)
     }
 
-    override fun addDraggablePoly(points: MutableIterable<MapPoint>, closedPolygon: Boolean): Int {
+    override fun addPolyLine(lineDescription: LineDescription): Int {
         return -1
     }
 
-    override fun appendPointToPoly(featureId: Int, point: MapPoint) {}
+    override fun addPolygon(polygonDescription: PolygonDescription): Int {
+        return -1
+    }
 
-    override fun removePolyLastPoint(featureId: Int) {}
+    override fun appendPointToPolyLine(featureId: Int, point: MapPoint) {}
 
-    override fun getPolyPoints(featureId: Int): MutableList<MapPoint> {
+    override fun removePolyLineLastPoint(featureId: Int) {}
+
+    override fun getPolyLinePoints(featureId: Int): MutableList<MapPoint> {
         return mutableListOf()
     }
 

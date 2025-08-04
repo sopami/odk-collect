@@ -3,11 +3,11 @@ package org.odk.collect.android.utilities;
 import android.net.Uri;
 
 import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
 
-import org.odk.collect.android.logic.PropertyManager;
-import org.odk.collect.android.openrosa.HttpCredentials;
-import org.odk.collect.android.openrosa.HttpCredentialsInterface;
+import org.odk.collect.metadata.PropertyManager;
+import org.odk.collect.openrosa.forms.OpenRosaXmlFetcher;
+import org.odk.collect.openrosa.http.HttpCredentials;
+import org.odk.collect.openrosa.http.HttpCredentialsInterface;
 import org.odk.collect.settings.keys.ProjectKeys;
 import org.odk.collect.shared.settings.Settings;
 
@@ -18,7 +18,7 @@ import java.util.Map;
 import javax.inject.Singleton;
 
 @Singleton
-public class WebCredentialsUtils {
+public class WebCredentialsUtils implements OpenRosaXmlFetcher.WebCredentialsProvider {
 
     private final Settings generalSettings;
 
@@ -65,7 +65,7 @@ public class WebCredentialsUtils {
         }
     }
 
-    static void clearAllCredentials() {
+    public static void clearAllCredentials() {
         HOST_CREDENTIALS.clear();
     }
 
@@ -87,21 +87,27 @@ public class WebCredentialsUtils {
      * @param url to find the credentials object
      * @return either null or an instance of HttpCredentialsInterface
      */
-    public @Nullable HttpCredentialsInterface getCredentials(@NonNull URI url) {
+    public @NonNull HttpCredentialsInterface getCredentials(@NonNull URI url) {
         String host = url.getHost();
         String serverPrefsUrl = getServerUrlFromPreferences();
         String prefsServerHost = (serverPrefsUrl == null) ? null : Uri.parse(serverPrefsUrl).getHost();
 
+        HttpCredentialsInterface hostCredentials = HOST_CREDENTIALS.get(host);
+
         // URL host is the same as the host in preferences
         if (prefsServerHost != null && prefsServerHost.equalsIgnoreCase(host)) {
             // Use the temporary credentials if they exist, otherwise use the credentials saved to preferences
-            if (HOST_CREDENTIALS.containsKey(host)) {
-                return HOST_CREDENTIALS.get(host);
+            if (hostCredentials != null) {
+                return hostCredentials;
             } else {
                 return new HttpCredentials(getUserNameFromPreferences(), getPasswordFromPreferences());
             }
         } else {
-            return HOST_CREDENTIALS.get(host);
+            if (hostCredentials != null) {
+                return hostCredentials;
+            } else {
+                return new HttpCredentials("", "");
+            }
         }
     }
 

@@ -5,11 +5,11 @@ import android.view.View;
 import androidx.test.ext.junit.runners.AndroidJUnit4;
 
 import org.javarosa.core.model.data.GeoPointData;
+import org.javarosa.core.model.data.StringData;
 import org.javarosa.form.api.FormEntryPrompt;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
-import org.odk.collect.android.R;
 import org.odk.collect.android.formentry.questions.QuestionDetails;
 import org.odk.collect.android.listeners.WidgetValueChangedListener;
 import org.odk.collect.android.widgets.interfaces.GeoDataRequester;
@@ -25,6 +25,7 @@ import static org.odk.collect.android.widgets.support.QuestionWidgetHelpers.mock
 import static org.odk.collect.android.widgets.support.QuestionWidgetHelpers.promptWithAnswer;
 import static org.odk.collect.android.widgets.support.QuestionWidgetHelpers.promptWithReadOnly;
 import static org.odk.collect.android.widgets.support.QuestionWidgetHelpers.promptWithReadOnlyAndAnswer;
+import static org.odk.collect.android.widgets.support.QuestionWidgetHelpers.widgetDependencies;
 import static org.odk.collect.android.widgets.support.QuestionWidgetHelpers.widgetTestActivity;
 
 @RunWith(AndroidJUnit4.class)
@@ -50,7 +51,20 @@ public class GeoPointMapWidgetTest {
     public void getAnswer_whenPromptHasAnswer_returnsPromptAnswer() {
         GeoPointMapWidget widget = createWidget(promptWithAnswer(answer));
         assertEquals(widget.getAnswer().getDisplayText(),
-                new GeoPointData(GeoWidgetUtils.getLocationParamsFromStringAnswer(answer.getDisplayText())).getDisplayText());
+                new GeoPointData(GeoWidgetUtils.parseGeometryPoint(answer.getDisplayText())).getDisplayText());
+    }
+
+    @Test
+    public void getAnswer_whenPromptHasInvalidAnswer_returnsNull() {
+        GeoPointMapWidget widget = createWidget(promptWithAnswer(new StringData("blah")));
+        assertNull(widget.getAnswer());
+    }
+
+    @Test
+    public void creatingWidgetWithInvalidValue_doesNotUpdateWidgetDisplayedAnswer() {
+        GeoPointMapWidget widget = createWidget(promptWithAnswer(new StringData("blah")));
+        assertEquals(widget.binding.geoAnswerText.getText(), "");
+        assertEquals(widget.binding.simpleButton.getText(), widget.getContext().getString(org.odk.collect.strings.R.string.get_point));
     }
 
     @Test
@@ -68,19 +82,19 @@ public class GeoPointMapWidgetTest {
     @Test
     public void whenPromptIsReadOnlyAndHasAnswer_viewGeoPointButtonIsShown() {
         GeoPointMapWidget widget = createWidget(promptWithReadOnlyAndAnswer(answer));
-        assertEquals(widget.binding.simpleButton.getText(), widget.getContext().getString(R.string.geopoint_view_read_only));
+        assertEquals(widget.binding.simpleButton.getText(), widget.getContext().getString(org.odk.collect.strings.R.string.view_point));
     }
 
     @Test
     public void whenPromptIsNotReadOnlyAndDoesNotHaveAnswer_startGeoPointButtonIsShown() {
         GeoPointMapWidget widget = createWidget(promptWithAnswer(null));
-        assertEquals(widget.binding.simpleButton.getText(), widget.getContext().getString(R.string.get_point));
+        assertEquals(widget.binding.simpleButton.getText(), widget.getContext().getString(org.odk.collect.strings.R.string.get_point));
     }
 
     @Test
     public void whenPromptIsNotReadOnlyAndHasAnswer_viewOrChangeLocationButtonIsShown() {
         GeoPointMapWidget widget = createWidget(promptWithAnswer(answer));
-        assertEquals(widget.binding.simpleButton.getText(), widget.getContext().getString(R.string.view_change_location));
+        assertEquals(widget.binding.simpleButton.getText(), widget.getContext().getString(org.odk.collect.strings.R.string.view_or_change_point));
     }
 
     @Test
@@ -89,7 +103,7 @@ public class GeoPointMapWidgetTest {
         widget.clearAnswer();
 
         assertEquals(widget.binding.geoAnswerText.getText(), "");
-        assertEquals(widget.binding.simpleButton.getText(), widget.getContext().getString(R.string.get_point));
+        assertEquals(widget.binding.simpleButton.getText(), widget.getContext().getString(org.odk.collect.strings.R.string.get_point));
     }
 
     @Test
@@ -108,6 +122,12 @@ public class GeoPointMapWidgetTest {
         assertEquals(widget.getAnswer().getDisplayText(), answer.getDisplayText());
     }
 
+    @Test
+    public void setDataWithInvalidValue_doesNotUpdateWidgetAnswer() {
+        GeoPointMapWidget widget = createWidget(promptWithAnswer(null));
+        widget.setData("blah");
+        assertEquals(widget.getAnswer(), null);
+    }
 
     @Test
     public void setData_updatesWidgetDisplayedAnswer() {
@@ -117,17 +137,25 @@ public class GeoPointMapWidgetTest {
     }
 
     @Test
+    public void setDataWithInvalidValue_doesNotUpdateWidgetDisplayedAnswer() {
+        GeoPointMapWidget widget = createWidget(promptWithAnswer(null));
+        widget.setData("blah");
+        assertEquals(widget.binding.geoAnswerText.getText(), "");
+        assertEquals(widget.binding.simpleButton.getText(), widget.getContext().getString(org.odk.collect.strings.R.string.get_point));
+    }
+
+    @Test
     public void setData_whenDataIsNull_updatesButtonLabel() {
         GeoPointMapWidget widget = createWidget(promptWithAnswer(answer));
         widget.setData("");
-        assertEquals(widget.binding.simpleButton.getText(), widget.getContext().getString(R.string.get_point));
+        assertEquals(widget.binding.simpleButton.getText(), widget.getContext().getString(org.odk.collect.strings.R.string.get_point));
     }
 
     @Test
     public void setData_whenDataIsNotNull_updatesButtonLabel() {
         GeoPointMapWidget widget = createWidget(promptWithAnswer(null));
         widget.setData(answer.getDisplayText());
-        assertEquals(widget.binding.simpleButton.getText(), widget.getContext().getString(R.string.view_change_location));
+        assertEquals(widget.binding.simpleButton.getText(), widget.getContext().getString(org.odk.collect.strings.R.string.view_or_change_point));
     }
 
     @Test
@@ -182,6 +210,6 @@ public class GeoPointMapWidgetTest {
 
     private GeoPointMapWidget createWidget(FormEntryPrompt prompt) {
         return new GeoPointMapWidget(widgetTestActivity(), new QuestionDetails(prompt),
-                waitingForDataRegistry, geoDataRequester);
+                waitingForDataRegistry, geoDataRequester, widgetDependencies());
     }
 }

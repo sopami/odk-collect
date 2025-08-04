@@ -1,8 +1,10 @@
 package org.odk.collect.android.widgets.support
 
 import androidx.fragment.app.Fragment
+import org.odk.collect.maps.LineDescription
 import org.odk.collect.maps.MapFragment
 import org.odk.collect.maps.MapPoint
+import org.odk.collect.maps.PolygonDescription
 import org.odk.collect.maps.markers.MarkerDescription
 import org.odk.collect.maps.markers.MarkerIconDescription
 
@@ -10,7 +12,7 @@ class NoOpMapFragment : Fragment(), MapFragment {
 
     override fun init(
         readyListener: MapFragment.ReadyListener?,
-        errorListener: MapFragment.ErrorListener?,
+        errorListener: MapFragment.ErrorListener?
     ) {
     }
 
@@ -25,6 +27,9 @@ class NoOpMapFragment : Fragment(), MapFragment {
     override fun setCenter(center: MapPoint?, animate: Boolean) {
     }
 
+    override fun zoomToCurrentLocation(center: MapPoint?) {
+    }
+
     override fun zoomToPoint(center: MapPoint?, animate: Boolean) {
     }
 
@@ -32,9 +37,9 @@ class NoOpMapFragment : Fragment(), MapFragment {
     }
 
     override fun zoomToBoundingBox(
-        points: MutableIterable<MapPoint>?,
+        points: Iterable<MapPoint>,
         scaleFactor: Double,
-        animate: Boolean,
+        animate: Boolean
     ) {
     }
 
@@ -42,7 +47,7 @@ class NoOpMapFragment : Fragment(), MapFragment {
         TODO("Not yet implemented")
     }
 
-    override fun addMarkers(markers: MutableList<MarkerDescription>?): MutableList<Int> {
+    override fun addMarkers(markers: List<MarkerDescription>): MutableList<Int> {
         TODO("Not yet implemented")
     }
 
@@ -53,17 +58,21 @@ class NoOpMapFragment : Fragment(), MapFragment {
         TODO("Not yet implemented")
     }
 
-    override fun addDraggablePoly(points: MutableIterable<MapPoint>, closedPolygon: Boolean): Int {
+    override fun addPolyLine(lineDescription: LineDescription): Int {
         TODO("Not yet implemented")
     }
 
-    override fun appendPointToPoly(featureId: Int, point: MapPoint) {
+    override fun addPolygon(polygonDescription: PolygonDescription): Int {
+        TODO("Not yet implemented")
     }
 
-    override fun removePolyLastPoint(featureId: Int) {
+    override fun appendPointToPolyLine(featureId: Int, point: MapPoint) {
     }
 
-    override fun getPolyPoints(featureId: Int): MutableList<MapPoint> {
+    override fun removePolyLineLastPoint(featureId: Int) {
+    }
+
+    override fun getPolyLinePoints(featureId: Int): MutableList<MapPoint> {
         TODO("Not yet implemented")
     }
 

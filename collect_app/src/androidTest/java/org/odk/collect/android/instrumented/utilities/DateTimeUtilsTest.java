@@ -25,8 +25,9 @@ import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.odk.collect.android.application.Collect;
-import org.odk.collect.android.logic.DatePickerDetails;
+import org.odk.collect.android.widgets.datetime.DatePickerDetails;
 import org.odk.collect.android.widgets.utilities.DateTimeWidgetUtils;
+import org.odk.collect.testshared.TimeZoneSetter;
 
 import java.util.Calendar;
 import java.util.Date;
@@ -45,6 +46,7 @@ public class DateTimeUtilsTest {
     private DatePickerDetails bikramSambatDatePickerDetails;
     private DatePickerDetails myanmarDatePickerDetails;
     private DatePickerDetails persianDatePickerDetails;
+    private DatePickerDetails buddhistDatePickerDetails;
 
     private Context context;
     private Locale defaultLocale;
@@ -59,6 +61,7 @@ public class DateTimeUtilsTest {
         bikramSambatDatePickerDetails = new DatePickerDetails(DatePickerDetails.DatePickerType.BIKRAM_SAMBAT, DatePickerDetails.DatePickerMode.SPINNERS);
         myanmarDatePickerDetails = new DatePickerDetails(DatePickerDetails.DatePickerType.MYANMAR, DatePickerDetails.DatePickerMode.SPINNERS);
         persianDatePickerDetails = new DatePickerDetails(DatePickerDetails.DatePickerType.PERSIAN, DatePickerDetails.DatePickerMode.SPINNERS);
+        buddhistDatePickerDetails = new DatePickerDetails(DatePickerDetails.DatePickerType.BUDDHIST, DatePickerDetails.DatePickerMode.SPINNERS);
 
         context = Collect.getInstance();
         defaultLocale = Locale.getDefault();
@@ -68,7 +71,7 @@ public class DateTimeUtilsTest {
     @Test
     public void getDateTimeLabelTest() {
         Locale.setDefault(Locale.ENGLISH);
-        TimeZone.setDefault(TimeZone.getTimeZone("GMT"));
+        TimeZoneSetter.setTimezone(TimeZone.getTimeZone("GMT"));
 
         // 20 Oct 1991 14:00 GMT
         Calendar calendar = Calendar.getInstance();
@@ -95,11 +98,14 @@ public class DateTimeUtilsTest {
 
         assertEquals("28 Mehr 1370 (Oct 20, 1991)", DateTimeWidgetUtils.getDateTimeLabel(date, persianDatePickerDetails, false, context));
         assertEquals("28 Mehr 1370, 14:00 (Oct 20, 1991, 14:00)", DateTimeWidgetUtils.getDateTimeLabel(date, persianDatePickerDetails, true, context));
+
+        assertEquals("20 ตุลาคม 2534 (Oct 20, 1991)", DateTimeWidgetUtils.getDateTimeLabel(date, buddhistDatePickerDetails, false, context));
+        assertEquals("20 ตุลาคม 2534, 14:00 (Oct 20, 1991, 14:00)", DateTimeWidgetUtils.getDateTimeLabel(date, buddhistDatePickerDetails, true, context));
     }
 
     @After
     public void resetTimeZone() {
         Locale.setDefault(defaultLocale);
-        TimeZone.setDefault(defaultTimezone);
+        TimeZoneSetter.setTimezone(defaultTimezone);
     }
 }

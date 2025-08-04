@@ -32,11 +32,11 @@ class PermissionsDialogCreatorTest {
 
     @Before
     fun setup() {
-        activity = createThemedActivity(FragmentActivity::class.java, R.style.Theme_MaterialComponents)
+        activity = createThemedActivity(FragmentActivity::class.java)
     }
 
     @Test
-    fun `PermissionListener should not be called immediatelly after displaying enable gps dialog`() {
+    fun `PermissionListener should not be called immediately after displaying enable gps dialog`() {
         PermissionsDialogCreatorImpl.showEnableGPSDialog(
             activity,
             permissionListener
@@ -75,11 +75,11 @@ class PermissionsDialogCreatorTest {
     }
 
     @Test
-    fun `PermissionListener should not be called immediatelly after displaying explanation dialog`() {
+    fun `PermissionListener should not be called immediately after displaying explanation dialog`() {
         PermissionsDialogCreatorImpl.showAdditionalExplanation(
             activity,
-            R.string.camera_runtime_permission_denied_title,
-            R.string.camera_runtime_permission_denied_desc,
+            org.odk.collect.strings.R.string.camera_runtime_permission_denied_title,
+            org.odk.collect.strings.R.string.camera_runtime_permission_denied_desc,
             R.drawable.ic_photo_camera,
             permissionListener
         )
@@ -91,8 +91,8 @@ class PermissionsDialogCreatorTest {
     fun `PermissionListener#additionalExplanationClosed should be called after clicking on the positive button in explanation dialog`() {
         PermissionsDialogCreatorImpl.showAdditionalExplanation(
             activity,
-            R.string.camera_runtime_permission_denied_title,
-            R.string.camera_runtime_permission_denied_desc,
+            org.odk.collect.strings.R.string.camera_runtime_permission_denied_title,
+            org.odk.collect.strings.R.string.camera_runtime_permission_denied_desc,
             R.drawable.ic_photo_camera,
             permissionListener
         )
@@ -106,11 +106,29 @@ class PermissionsDialogCreatorTest {
     }
 
     @Test
+    fun `PermissionListener#additionalExplanationClosed should be called after clicking on the 'Open Settings' button in explanation dialog`() {
+        PermissionsDialogCreatorImpl.showAdditionalExplanation(
+            activity,
+            org.odk.collect.strings.R.string.camera_runtime_permission_denied_title,
+            org.odk.collect.strings.R.string.camera_runtime_permission_denied_desc,
+            R.drawable.ic_photo_camera,
+            permissionListener
+        )
+
+        val dialog = ShadowDialog.getLatestDialog() as AlertDialog
+        dialog.getButton(DialogInterface.BUTTON_NEUTRAL).performClick()
+        RobolectricHelpers.runLooper()
+
+        verify(permissionListener).additionalExplanationClosed()
+        verifyNoMoreInteractions(permissionListener)
+    }
+
+    @Test
     fun `Settings should be open after clicking on the neutral button in explanation dialog`() {
         PermissionsDialogCreatorImpl.showAdditionalExplanation(
             activity,
-            R.string.camera_runtime_permission_denied_title,
-            R.string.camera_runtime_permission_denied_desc,
+            org.odk.collect.strings.R.string.camera_runtime_permission_denied_title,
+            org.odk.collect.strings.R.string.camera_runtime_permission_denied_desc,
             R.drawable.ic_photo_camera,
             permissionListener
         )
@@ -121,7 +139,5 @@ class PermissionsDialogCreatorTest {
 
         Intents.intended(IntentMatchers.hasAction(Settings.ACTION_APPLICATION_DETAILS_SETTINGS))
         Intents.intended(IntentMatchers.hasData(Uri.fromParts("package", activity.packageName, null)))
-
-        verifyNoInteractions(permissionListener)
     }
 }

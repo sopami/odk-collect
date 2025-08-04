@@ -8,25 +8,6 @@ object AnalyticsEvents {
     const val SET_SERVER = "SetServer"
 
     /**
-     * Track changes to the Google Sheets fallback submission URL setting. The action should be
-     * a hash of the URL.
-     */
-    const val SET_FALLBACK_SHEETS_URL = "SetFallbackSheetsUrl"
-
-    /**
-     * Track video requests with high resolution setting turned off. The action should be a hash of
-     * the form definition.
-     */
-    const val REQUEST_VIDEO_NOT_HIGH_RES = "RequestVideoNotHighRes"
-
-    /**
-     * Track video requests with high resolution setting turned on. This is tracked to contextualize
-     * the counts with the high resolution setting turned off since we expect that video is not very
-     * common overall. The action should be a hash of the form definition.
-     */
-    const val REQUEST_HIGH_RES_VIDEO = "RequestHighResVideo"
-
-    /**
      * Track submission encryption. The action should be a hash of the form definition.
      */
     const val ENCRYPT_SUBMISSION = "EncryptSubmission"
@@ -36,41 +17,6 @@ object AnalyticsEvents {
      * hash of the form definition.
      */
     const val SUBMISSION = "Submission"
-
-    /**
-     * Track form definitions with the saveIncomplete attribute. The action should be saveIncomplete
-     * and the label should be a hash of the form definition.
-     */
-    const val SAVE_INCOMPLETE = "WidgetAttribute"
-
-    /**
-     * Used to measure how popular the refresh button on Fill Blank Forms is. The button
-     * only displays when Match Exactly is enabled. Right now the action passed is "Manual". This
-     * means that we could extend the event to track auto or other syncs in the future.
-     */
-    const val MATCH_EXACTLY_SYNC = "MatchExactlySync"
-
-    /**
-     * Tracks if any forms are being used as part of a workflow where instances are imported
-     * from disk
-     */
-    const val IMPORT_INSTANCE = "ImportInstance"
-
-    /**
-     * Tracks if any forms are being used as part of a workflow where instances are imported
-     * from disk and then encrypted
-     */
-    const val IMPORT_AND_ENCRYPT_INSTANCE = "ImportAndEncryptInstance"
-
-    /**
-     * Tracks responses from OpenMapKit to the OSMWidget
-     */
-    const val OPEN_MAP_KIT_RESPONSE = "OpenMapKitResponse"
-
-    /**
-     * Tracks how often users create shortcuts to forms
-     */
-    const val CREATE_SHORTCUT = "CreateShortcut"
 
     /**
      * Tracks how often instances that have been deleted on disk are opened for editing/viewing
@@ -96,11 +42,6 @@ object AnalyticsEvents {
      * Tracks how often projects are created by manually entering details.
      */
     const val MANUAL_CREATE_PROJECT = "ProjectCreateManual"
-
-    /**
-     * Tracks how often a Google account is used to configure a manually created project
-     */
-    const val GOOGLE_ACCOUNT_PROJECT = "ProjectCreateGoogle"
 
     /**
      * Tracks how often projects with the same connection settings as an existing one are attempted
@@ -144,37 +85,28 @@ object AnalyticsEvents {
 
     const val INSTANCE_PROVIDER_INSERT = "InstanceProviderInsert"
 
-    const val INSTANCE_PROVIDER_UPDATE = "InstanceProviderUpdate"
-
     const val INSTANCE_PROVIDER_DELETE = "InstanceProviderDelete"
 
     /**
-     * Tracks how many forms include an accuracy threshold for the default `geopoint` question
+     * Tracks how often drafts that can't be bulk finalized are attempted to be
      */
-    const val ACCURACY_THRESHOLD = "AccuracyThreshold"
+    const val BULK_FINALIZE_ENCRYPTED_FORM = "BulkFinalizeEncryptedForm"
+    const val BULK_FINALIZE_SAVE_POINT = "BulkFinalizeSavePoint"
 
     /**
-     * Tracks how many forms use default accuracy thresholds for the default `geopoint` question
+     * Tracks how often saved forms are manually deleted and in what number
      */
-    const val ACCURACY_THRESHOLD_DEFAULT = "AccuracyThresholdDefault"
+    const val DELETE_SAVED_FORM_FEW = "DeleteSavedFormFew" // < 10
+    const val DELETE_SAVED_FORM_TENS = "DeleteSavedFormTens" // >= 10
+    const val DELETE_SAVED_FORM_HUNDREDS = "DeleteSavedFormHundreds" // >= 100
 
     /**
-     * Tracks how often form details with invalid hashes are provided by a server
+     * Tracks how often the INSTANCE_UPLOAD action is used with a custom server URL
      */
-    const val INVALID_FORM_HASH = "InvalidFormHash"
+    const val INSTANCE_UPLOAD_CUSTOM_SERVER = "InstanceUploadCustomServer"
 
     /**
-     * Tracks how often "cellular_only" option is used in auto send
+     * Tracks how often projects are reset
      */
-    const val CELLULAR_ONLY = "CellularOnly"
-
-    /**
-     * Tracks how often non finalized forms are edited
-     */
-    const val EDIT_NON_FINALIZED_FORM = "EditNonFinalizedForm"
-
-    /**
-     * Tracks how often finalized forms are edited
-     */
-    const val EDIT_FINALIZED_FORM = "EditFinalizedForm"
+    const val RESET_PROJECT = "ResetProject"
 }

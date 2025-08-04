@@ -17,13 +17,12 @@
 package org.odk.collect.android.utilities;
 
 import android.content.Context;
+import android.content.res.Resources;
 
-import org.odk.collect.android.R;
 import org.odk.collect.android.application.Collect;
+import org.odk.collect.android.instancemanagement.InstanceExtKt;
 import org.odk.collect.forms.instances.Instance;
 import org.odk.collect.forms.instances.InstancesRepository;
-import org.odk.collect.forms.Form;
-import org.odk.collect.forms.FormsRepository;
 
 import java.util.Iterator;
 import java.util.Map;
@@ -34,7 +33,6 @@ import static org.odk.collect.strings.localization.LocalizedApplicationKt.getLoc
 public final class InstanceUploaderUtils {
 
     public static final String DEFAULT_SUCCESSFUL_TEXT = "full submission upload was successful!";
-    public static final String SPREADSHEET_UPLOADED_TO_GOOGLE_DRIVE = "Failed. Records can only be submitted to spreadsheets created in Google Sheets. The submission spreadsheet specified was uploaded to Google Drive.";
 
     private InstanceUploaderUtils() {
     }
@@ -54,20 +52,20 @@ public final class InstanceUploaderUtils {
 
         while (it.hasNext()) {
             Instance instance = instancesRepository.get(Long.valueOf(it.next()));
-            message.append(getUploadResultMessageForInstances(instance, result));
+            message.append(getUploadResultMessageForInstances(instance, context.getResources(), result));
         }
 
         if (message.length() == 0) {
-            message = new StringBuilder(context.getString(R.string.no_forms_uploaded));
+            message = new StringBuilder(context.getString(org.odk.collect.strings.R.string.no_forms_uploaded));
         }
 
         return message.toString().trim();
     }
 
-    private static String getUploadResultMessageForInstances(Instance instance, Map<String, String> resultMessagesByInstanceId) {
+    private static String getUploadResultMessageForInstances(Instance instance, Resources resources, Map<String, String> resultMessagesByInstanceId) {
         StringBuilder uploadResultMessage = new StringBuilder();
         if (instance != null) {
-            String name = instance.getDisplayName();
+            String name = InstanceExtKt.userVisibleInstanceName(instance, resources);
             String text = localizeDefaultAggregateSuccessfulText(resultMessagesByInstanceId.get(instance.getDbId().toString()));
             uploadResultMessage
                     .append(name)
@@ -80,48 +78,8 @@ public final class InstanceUploaderUtils {
 
     private static String localizeDefaultAggregateSuccessfulText(String text) {
         if (text != null && text.equals(DEFAULT_SUCCESSFUL_TEXT)) {
-            text = getLocalizedString(Collect.getInstance(), R.string.success);
+            text = getLocalizedString(Collect.getInstance(), org.odk.collect.strings.R.string.success);
         }
         return text;
-    }
-
-    // If a spreadsheet is created using Excel (or a similar tool) and uploaded to GD it contains:
-    // drive.google.com/file/d/ instead of docs.google.com/spreadsheets/d/
-    // Such a file can't be used. We can write data only to documents generated via Google Sheets
-    // https://forum.getodk.org/t/error-400-bad-request-failed-precondition-on-collect-to-google-sheets/19801/5?u=grzesiek2010
-    public static boolean doesUrlRefersToGoogleSheetsFile(String url) {
-        return !url.contains("drive.google.com/file/d/");
-    }
-
-    /**
-     * Returns whether instances of the form specified should be auto-deleted after successful
-     * update.
-     *
-     * If the form explicitly sets the auto-delete property, then it overrides the preference.
-     */
-    public static boolean shouldFormBeDeleted(FormsRepository formsRepository, String jrFormId, String jrFormVersion, boolean isAutoDeleteAppSettingEnabled) {
-        Form form = formsRepository.getLatestByFormIdAndVersion(jrFormId, jrFormVersion);
-        if (form == null) {
-            return false;
-        }
-
-        return form.getAutoDelete() == null ? isAutoDeleteAppSettingEnabled : Boolean.valueOf(form.getAutoDelete());
-    }
-
-    /**
-     * Returns whether a form with the specified form_id should be auto-sent given the current
-     * app-level auto-send settings. Returns false if there is no form with the specified form_id.
-     * <p>
-     * A form should be auto-sent if auto-send is on at the app level AND this form doesn't override
-     * auto-send settings OR if auto-send is on at the form-level.
-     *
-     * @param isAutoSendAppSettingEnabled whether the auto-send option is enabled at the app level
-     */
-    public static boolean shouldFormBeSent(FormsRepository formsRepository, String jrFormId, String jrFormVersion, boolean isAutoSendAppSettingEnabled) {
-        Form form = formsRepository.getLatestByFormIdAndVersion(jrFormId, jrFormVersion);
-        if (form == null) {
-            return false;
-        }
-        return form.getAutoSend() == null ? isAutoSendAppSettingEnabled : Boolean.valueOf(form.getAutoSend());
     }
 }

@@ -3,7 +3,6 @@ package org.odk.collect.android.feature.projects
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.RuleChain
-import org.odk.collect.android.R
 import org.odk.collect.android.support.TestDependencies
 import org.odk.collect.android.support.pages.MainMenuPage
 import org.odk.collect.android.support.rules.CollectTestRule
@@ -36,29 +35,13 @@ class AddNewProjectTest {
     }
 
     @Test
-    fun addingGdriveProjectManually_addsNewProject() {
-        val googleAccount = "steph@curry.basket"
-        testDependencies.googleAccountPicker.setDeviceAccount(googleAccount)
-
-        rule.startAtMainMenu()
-            .openProjectSettingsDialog()
-            .clickAddProject()
-            .switchToManualMode()
-            .openGooglePickerAndSelect(googleAccount)
-
-            .openProjectSettingsDialog()
-            .assertCurrentProject(googleAccount, "$googleAccount / Google Drive")
-            .assertInactiveProject("Demo project", "demo.getodk.org")
-    }
-
-    @Test
     fun addingProjectFromQrCode_addsNewProject() {
         val page = rule.startAtMainMenu()
             .openProjectSettingsDialog()
             .clickAddProject()
 
-        testDependencies.stubBarcodeViewDecoder.scan("{\"general\":{\"server_url\":\"https:\\/\\/my-server.com\",\"username\":\"adam\",\"password\":\"1234\"},\"admin\":{}}")
-        page.checkIsToastWithMessageDisplayed(R.string.switched_project, "my-server.com")
+        testDependencies.fakeBarcodeScannerViewFactory.scan("{\"general\":{\"server_url\":\"https:\\/\\/my-server.com\",\"username\":\"adam\",\"password\":\"1234\"},\"admin\":{}}")
+        page.checkIsToastWithMessageDisplayed(org.odk.collect.strings.R.string.switched_project, "my-server.com")
 
         MainMenuPage()
             .assertOnPage()
@@ -73,11 +56,11 @@ class AddNewProjectTest {
             .openProjectSettingsDialog()
             .clickAddProject()
 
-        testDependencies.stubBarcodeViewDecoder.scan("{\"general\":{\"server_url\":\"https://demo.getodk.org\"},\"admin\":{}}")
+        testDependencies.fakeBarcodeScannerViewFactory.scan("{\"general\":{\"server_url\":\"https://demo.getodk.org\"},\"admin\":{}}")
 
         page.assertDuplicateDialogShown()
             .switchToExistingProject()
-            .checkIsToastWithMessageDisplayed(R.string.switched_project, "Demo project")
+            .checkIsToastWithMessageDisplayed(org.odk.collect.strings.R.string.switched_project, "Demo project")
             .openProjectSettingsDialog()
             .assertCurrentProject("Demo project", "demo.getodk.org")
             .assertNotInactiveProject("Demo project")
@@ -89,11 +72,11 @@ class AddNewProjectTest {
             .openProjectSettingsDialog()
             .clickAddProject()
 
-        testDependencies.stubBarcodeViewDecoder.scan("{\"general\":{\"server_url\":\"https://demo.getodk.org\"},\"admin\":{}}")
+        testDependencies.fakeBarcodeScannerViewFactory.scan("{\"general\":{\"server_url\":\"https://demo.getodk.org\"},\"admin\":{}}")
 
         page.assertDuplicateDialogShown()
             .addDuplicateProject()
-            .checkIsToastWithMessageDisplayed(R.string.switched_project, "Demo project")
+            .checkIsToastWithMessageDisplayed(org.odk.collect.strings.R.string.switched_project, "Demo project")
             .openProjectSettingsDialog()
             .assertCurrentProject("Demo project", "demo.getodk.org")
             .assertInactiveProject("Demo project", "demo.getodk.org")
@@ -108,7 +91,7 @@ class AddNewProjectTest {
             .inputUrl("https://demo.getodk.org")
             .addProjectAndAssertDuplicateDialogShown()
             .switchToExistingProject()
-            .checkIsToastWithMessageDisplayed(R.string.switched_project, "Demo project")
+            .checkIsToastWithMessageDisplayed(org.odk.collect.strings.R.string.switched_project, "Demo project")
             .openProjectSettingsDialog()
             .assertCurrentProject("Demo project", "demo.getodk.org")
             .assertNotInactiveProject("Demo project")
@@ -123,7 +106,7 @@ class AddNewProjectTest {
             .inputUrl("https://demo.getodk.org")
             .addProjectAndAssertDuplicateDialogShown()
             .addDuplicateProject()
-            .checkIsToastWithMessageDisplayed(R.string.switched_project, "Demo project")
+            .checkIsToastWithMessageDisplayed(org.odk.collect.strings.R.string.switched_project, "Demo project")
             .openProjectSettingsDialog()
             .assertCurrentProject("Demo project", "demo.getodk.org")
             .assertInactiveProject("Demo project", "demo.getodk.org")

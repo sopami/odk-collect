@@ -16,6 +16,11 @@
 
 package org.odk.collect.forms.instances;
 
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
+
+import java.util.Objects;
+
 /**
  * A filled form stored on the device.
  * <p>
@@ -24,6 +29,9 @@ package org.odk.collect.forms.instances;
 public final class Instance {
     // status for instances
     public static final String STATUS_INCOMPLETE = "incomplete";
+    public static final String STATUS_INVALID = "invalid";
+    public static final String STATUS_VALID = "valid";
+    public static final String STATUS_NEW_EDIT = "newEdit";
     public static final String STATUS_COMPLETE = "complete";
     public static final String STATUS_SUBMITTED = "submitted";
     public static final String STATUS_SUBMISSION_FAILED = "submissionFailed";
@@ -38,11 +46,15 @@ public final class Instance {
     private final String formVersion;
     private final String status;
     private final Long lastStatusChangeDate;
+    private final Long finalizationDate;
     private final Long deletedDate;
     private final String geometryType;
     private final String geometry;
+    private final Long editOf;
+    private final Long editNumber;
 
     private final Long dbId;
+    private final boolean canDeleteBeforeSend;
 
     private Instance(Builder builder) {
         displayName = builder.displayName;
@@ -53,9 +65,13 @@ public final class Instance {
         formVersion = builder.formVersion;
         status = builder.status;
         lastStatusChangeDate = builder.lastStatusChangeDate;
+        finalizationDate = builder.finalizationDate;
         deletedDate = builder.deletedDate;
         geometryType = builder.geometryType;
         geometry = builder.geometry;
+        editOf = builder.editOf;
+        editNumber = builder.editNumber;
+        canDeleteBeforeSend = builder.canDeleteBeforeSend;
 
         dbId = builder.dbId;
     }
@@ -63,17 +79,21 @@ public final class Instance {
     public static class Builder {
         private String displayName;
         private String submissionUri;
-        private boolean canEditWhenComplete;
+        private boolean canEditWhenComplete = true;
         private String instanceFilePath;
         private String formId;
         private String formVersion;
         private String status;
         private Long lastStatusChangeDate;
+        private Long finalizationDate;
         private Long deletedDate;
         private String geometryType;
         private String geometry;
+        private Long editOf;
+        private Long editNumber;
 
         private Long dbId;
+        private boolean canDeleteBeforeSend = true;
 
         public Builder() {
 
@@ -89,9 +109,13 @@ public final class Instance {
             formVersion = instance.formVersion;
             status = instance.status;
             lastStatusChangeDate = instance.lastStatusChangeDate;
+            finalizationDate = instance.finalizationDate;
             deletedDate = instance.deletedDate;
             geometryType = instance.geometryType;
             geometry = instance.geometry;
+            editOf = instance.editOf;
+            editNumber = instance.editNumber;
+            canDeleteBeforeSend = instance.canDeleteBeforeSend;
         }
 
         public Builder displayName(String displayName) {
@@ -134,6 +158,11 @@ public final class Instance {
             return this;
         }
 
+        public Builder finalizationDate(Long finalizationDate) {
+            this.finalizationDate = finalizationDate;
+            return this;
+        }
+
         public Builder deletedDate(Long deletedDate) {
             this.deletedDate = deletedDate;
             return this;
@@ -149,8 +178,24 @@ public final class Instance {
             return this;
         }
 
+        public Builder editOf(Long editOf) {
+            this.editOf = editOf;
+            return this;
+        }
+
+        public Builder editNumber(Long editNumber) {
+            this.editNumber = editNumber;
+            return this;
+        }
+
         public Builder dbId(Long dbId) {
             this.dbId = dbId;
+            return this;
+        }
+
+        @NotNull
+        public Builder canDeleteBeforeSend(boolean canDeleteBeforeSend) {
+            this.canDeleteBeforeSend = canDeleteBeforeSend;
             return this;
         }
 
@@ -191,6 +236,11 @@ public final class Instance {
         return lastStatusChangeDate;
     }
 
+    public Long getFinalizationDate() {
+        return finalizationDate;
+    }
+
+    @Nullable
     public Long getDeletedDate() {
         return deletedDate;
     }
@@ -203,18 +253,41 @@ public final class Instance {
         return geometry;
     }
 
+    @Nullable
+    public Long getEditOf() {
+        return editOf;
+    }
+
+    @Nullable
+    public Long getEditNumber() {
+        return editNumber;
+    }
+
+
     public Long getDbId() {
         return dbId;
     }
 
+    public boolean canDeleteBeforeSend() {
+        return canDeleteBeforeSend;
+    }
+
     @Override
-    public boolean equals(Object other) {
-        return other == this || other instanceof Instance
-                && this.instanceFilePath.equals(((Instance) other).instanceFilePath);
+    public boolean equals(Object o) {
+        if (this == o) {
+            return true;
+        }
+
+        if (o == null || getClass() != o.getClass()) {
+            return false;
+        }
+
+        Instance instance = (Instance) o;
+        return canEditWhenComplete == instance.canEditWhenComplete && Objects.equals(displayName, instance.displayName) && Objects.equals(submissionUri, instance.submissionUri) && Objects.equals(instanceFilePath, instance.instanceFilePath) && Objects.equals(formId, instance.formId) && Objects.equals(formVersion, instance.formVersion) && Objects.equals(status, instance.status) && Objects.equals(lastStatusChangeDate, instance.lastStatusChangeDate) && Objects.equals(finalizationDate, instance.finalizationDate) && Objects.equals(deletedDate, instance.deletedDate) && Objects.equals(geometryType, instance.geometryType) && Objects.equals(geometry, instance.geometry) && Objects.equals(editOf, instance.editOf) && Objects.equals(editNumber, instance.editNumber) && Objects.equals(dbId, instance.dbId);
     }
 
     @Override
     public int hashCode() {
-        return instanceFilePath.hashCode();
+        return Objects.hash(displayName, submissionUri, canEditWhenComplete, instanceFilePath, formId, formVersion, status, lastStatusChangeDate, finalizationDate, deletedDate, geometryType, geometry, editOf, editNumber, dbId);
     }
 }

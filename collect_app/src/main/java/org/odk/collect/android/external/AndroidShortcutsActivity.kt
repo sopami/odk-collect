@@ -18,11 +18,10 @@ import android.content.Intent
 import android.os.Bundle
 import android.os.Parcelable
 import androidx.activity.viewModels
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import org.odk.collect.android.R
-import org.odk.collect.android.analytics.AnalyticsEvents
-import org.odk.collect.android.analytics.AnalyticsUtils
 import org.odk.collect.android.formlists.blankformlist.BlankFormListItem
 import org.odk.collect.android.formlists.blankformlist.BlankFormListViewModel
 import org.odk.collect.android.injection.DaggerUtils
@@ -41,25 +40,26 @@ class AndroidShortcutsActivity : AppCompatActivity() {
 
     private val viewModel: BlankFormListViewModel by viewModels { viewModelFactory }
 
+    private var dialog: AlertDialog? = null
+
     public override fun onCreate(bundle: Bundle?) {
         super.onCreate(bundle)
         DaggerUtils.getComponent(this).inject(this)
 
-        showFormListDialog(viewModel.getAllForms())
+        viewModel.formsToDisplay.observe(this) { forms ->
+            showFormListDialog(forms)
+        }
     }
 
     private fun showFormListDialog(blankFormListItems: List<BlankFormListItem>) {
-        MaterialAlertDialogBuilder(this)
-            .setTitle(R.string.select_odk_shortcut)
+        dialog?.dismiss()
+        dialog = MaterialAlertDialogBuilder(this)
+            .setTitle(org.odk.collect.strings.R.string.select_odk_shortcut)
             .setItems(
                 blankFormListItems
                     .map { it.formName }
                     .toTypedArray()
             ) { _: DialogInterface?, item: Int ->
-                AnalyticsUtils.logServerEvent(
-                    AnalyticsEvents.CREATE_SHORTCUT,
-                    settingsProvider.getUnprotectedSettings()
-                )
                 val intent = getShortcutIntent(blankFormListItems, item)
                 setResult(RESULT_OK, intent)
                 finish()
@@ -69,7 +69,9 @@ class AndroidShortcutsActivity : AppCompatActivity() {
                 finish()
             }
             .create()
-            .show()
+            .also {
+                it.show()
+            }
     }
 
     private fun getShortcutIntent(forms: List<BlankFormListItem>, item: Int): Intent {

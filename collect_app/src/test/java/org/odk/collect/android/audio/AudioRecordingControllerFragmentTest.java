@@ -15,29 +15,26 @@ import android.view.View;
 import androidx.annotation.NonNull;
 import androidx.fragment.app.testing.FragmentScenario;
 import androidx.lifecycle.ViewModel;
+import androidx.lifecycle.ViewModelProvider;
+import androidx.lifecycle.viewmodel.CreationExtras;
 import androidx.test.ext.junit.runners.AndroidJUnit4;
 
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
-import org.odk.collect.analytics.Analytics;
 import org.odk.collect.android.R;
 import org.odk.collect.android.formentry.BackgroundAudioViewModel;
 import org.odk.collect.android.formentry.FormEntryViewModel;
-import org.odk.collect.android.formentry.FormSessionRepository;
 import org.odk.collect.android.injection.config.AppDependencyModule;
 import org.odk.collect.android.support.CollectHelpers;
-import org.odk.collect.android.utilities.ExternalWebPageHelper;
 import org.odk.collect.androidshared.livedata.MutableNonNullLiveData;
 import org.odk.collect.androidshared.ui.FragmentFactoryBuilder;
-import org.odk.collect.async.Scheduler;
 import org.odk.collect.audiorecorder.recorder.Output;
 import org.odk.collect.audiorecorder.recording.AudioRecorder;
 import org.odk.collect.audiorecorder.testsupport.StubAudioRecorder;
 import org.odk.collect.fragmentstest.FragmentScenarioLauncherRule;
-import org.odk.collect.permissions.PermissionsChecker;
-import org.odk.collect.settings.SettingsProvider;
+import org.odk.collect.webpage.ExternalWebPageHelper;
 import org.robolectric.annotation.Config;
 
 import java.io.File;
@@ -53,9 +50,23 @@ public class AudioRecordingControllerFragmentTest {
     private MutableNonNullLiveData<Boolean> isBackgroundRecordingEnabled;
     private ExternalWebPageHelper externalWebPageHelper;
 
+    private ViewModelProvider.Factory viewModelFactory = new ViewModelProvider.Factory() {
+        @NonNull
+        @Override
+        public <T extends ViewModel> T create(@NonNull Class<T> modelClass, @NonNull CreationExtras extras) {
+            if (modelClass == BackgroundAudioViewModel.class) {
+                return (T) backgroundAudioViewModel;
+            } else if (modelClass == FormEntryViewModel.class) {
+                return (T) formEntryViewModel;
+            } else {
+                throw new IllegalArgumentException();
+            }
+        }
+    };
+
     @Rule
-    public FragmentScenarioLauncherRule launcherRule = new FragmentScenarioLauncherRule(R.style.Theme_MaterialComponents, new FragmentFactoryBuilder()
-            .forClass(AudioRecordingControllerFragment.class, () -> new AudioRecordingControllerFragment("blah"))
+    public FragmentScenarioLauncherRule launcherRule = new FragmentScenarioLauncherRule(new FragmentFactoryBuilder()
+            .forClass(AudioRecordingControllerFragment.class, () -> new AudioRecordingControllerFragment(viewModelFactory))
             .build());
 
     @Before
@@ -75,29 +86,6 @@ public class AudioRecordingControllerFragmentTest {
         externalWebPageHelper = mock(ExternalWebPageHelper.class);
 
         CollectHelpers.overrideAppDependencyModule(new AppDependencyModule() {
-
-            @Override
-            public BackgroundAudioViewModel.Factory providesBackgroundAudioViewModelFactory(AudioRecorder audioRecorder, SettingsProvider settingsProvider, PermissionsChecker permissionsChecker, Analytics analytics, FormSessionRepository formSessionRepository) {
-                return new BackgroundAudioViewModel.Factory(audioRecorder, settingsProvider.getUnprotectedSettings(), permissionsChecker, System::currentTimeMillis, formSessionRepository) {
-                    @NonNull
-                    @Override
-                    public <T extends ViewModel> T create(@NonNull Class<T> modelClass) {
-                        return (T) backgroundAudioViewModel;
-                    }
-                };
-            }
-
-            @Override
-            public FormEntryViewModel.Factory providesFormEntryViewModelFactory(Scheduler scheduler, FormSessionRepository formSessionRepository) {
-                return new FormEntryViewModel.Factory(System::currentTimeMillis, scheduler, formSessionRepository) {
-                    @NonNull
-                    @Override
-                    public <T extends ViewModel> T create(@NonNull Class<T> modelClass) {
-                        return (T) formEntryViewModel;
-                    }
-                };
-            }
-
             @Override
             public AudioRecorder providesAudioRecorder(Application application) {
                 return audioRecorder;
@@ -166,8 +154,8 @@ public class AudioRecordingControllerFragmentTest {
 
         FragmentScenario<AudioRecordingControllerFragment> scenario = launcherRule.launchInContainer(AudioRecordingControllerFragment.class);
         scenario.onFragment(fragment -> {
-            assertThat(shadowOf(fragment.binding.pauseRecording.getIcon()).getCreatedFromResId(), is(R.drawable.ic_baseline_mic_24));
-            assertThat(fragment.binding.pauseRecording.getContentDescription(), is(fragment.getString(R.string.resume_recording)));
+            assertThat(shadowOf(fragment.binding.pauseRecording.getIcon()).getCreatedFromResId(), is(org.odk.collect.icons.R.drawable.ic_baseline_mic_24));
+            assertThat(fragment.binding.pauseRecording.getContentDescription(), is(fragment.getString(org.odk.collect.strings.R.string.resume_recording)));
         });
     }
 
@@ -191,7 +179,7 @@ public class AudioRecordingControllerFragmentTest {
         FragmentScenario<AudioRecordingControllerFragment> scenario = launcherRule.launchInContainer(AudioRecordingControllerFragment.class);
         scenario.onFragment(fragment -> {
             assertThat(shadowOf(fragment.binding.pauseRecording.getIcon()).getCreatedFromResId(), is(R.drawable.ic_pause_24dp));
-            assertThat(fragment.binding.pauseRecording.getContentDescription(), is(fragment.getString(R.string.pause_recording)));
+            assertThat(fragment.binding.pauseRecording.getContentDescription(), is(fragment.getString(org.odk.collect.strings.R.string.pause_recording)));
         });
     }
 
@@ -203,7 +191,7 @@ public class AudioRecordingControllerFragmentTest {
 
         FragmentScenario<AudioRecordingControllerFragment> scenario = launcherRule.launchInContainer(AudioRecordingControllerFragment.class);
         scenario.onFragment(fragment -> {
-            assertThat(shadowOf(fragment.binding.recordingIcon.getDrawable()).getCreatedFromResId(), is(R.drawable.ic_baseline_mic_24));
+            assertThat(shadowOf(fragment.binding.recordingIcon.getDrawable()).getCreatedFromResId(), is(org.odk.collect.icons.R.drawable.ic_baseline_mic_24));
         });
     }
 
@@ -286,7 +274,7 @@ public class AudioRecordingControllerFragmentTest {
         FragmentScenario<AudioRecordingControllerFragment> scenario = launcherRule.launchInContainer(AudioRecordingControllerFragment.class);
         scenario.onFragment(fragment -> {
             assertThat(fragment.binding.getRoot().getVisibility(), is(View.VISIBLE));
-            assertThat(fragment.binding.timeCode.getText(), is(fragment.getString(R.string.recording_disabled, "⋮")));
+            assertThat(fragment.binding.timeCode.getText(), is(fragment.getString(org.odk.collect.strings.R.string.recording_disabled, "⋮")));
             assertThat(fragment.binding.volumeBar.getVisibility(), is(View.GONE));
             assertThat(fragment.binding.controls.getVisibility(), is(View.GONE));
             assertThat(fragment.binding.help.getVisibility(), is(View.GONE));
@@ -317,7 +305,7 @@ public class AudioRecordingControllerFragmentTest {
 
         scenario.onFragment(fragment -> {
             assertThat(fragment.binding.getRoot().getVisibility(), is(View.VISIBLE));
-            assertThat(fragment.binding.timeCode.getText(), is(fragment.getString(R.string.start_recording_failed)));
+            assertThat(fragment.binding.timeCode.getText(), is(fragment.getString(org.odk.collect.strings.R.string.start_recording_failed)));
             assertThat(fragment.binding.volumeBar.getVisibility(), is(View.GONE));
             assertThat(fragment.binding.controls.getVisibility(), is(View.GONE));
             assertThat(fragment.binding.help.getVisibility(), is(View.GONE));

@@ -1,11 +1,11 @@
 package org.odk.collect.android.feature.settings;
 
-import android.content.Context;
+import static androidx.test.core.app.ApplicationProvider.getApplicationContext;
+
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 
 import androidx.test.ext.junit.runners.AndroidJUnit4;
-import androidx.work.WorkManager;
 
 import org.junit.After;
 import org.junit.Rule;
@@ -15,52 +15,31 @@ import org.junit.runner.RunWith;
 import org.odk.collect.android.R;
 import org.odk.collect.android.configure.qr.AppConfigurationGenerator;
 import org.odk.collect.android.configure.qr.QRCodeGenerator;
-import org.odk.collect.android.injection.config.AppDependencyModule;
-import org.odk.collect.android.support.rules.CollectTestRule;
-import org.odk.collect.android.support.rules.ResetStateRule;
-import org.odk.collect.android.support.rules.RunnableRule;
-import org.odk.collect.android.support.StubBarcodeViewDecoder;
-import org.odk.collect.android.support.TestScheduler;
-import org.odk.collect.android.support.pages.ProjectSettingsPage;
+import org.odk.collect.android.support.TestDependencies;
 import org.odk.collect.android.support.pages.MainMenuPage;
+import org.odk.collect.android.support.pages.ProjectSettingsPage;
 import org.odk.collect.android.support.pages.QRCodePage;
+import org.odk.collect.android.support.rules.CollectTestRule;
+import org.odk.collect.android.support.rules.RunnableRule;
 import org.odk.collect.android.support.rules.TestRuleChain;
-import org.odk.collect.android.views.BarcodeViewDecoder;
-import org.odk.collect.async.Scheduler;
 
 import java.io.File;
 import java.io.FileOutputStream;
 import java.util.Collection;
 
-import static androidx.test.core.app.ApplicationProvider.getApplicationContext;
-
 @RunWith(AndroidJUnit4.class)
 public class ConfigureWithQRCodeTest {
 
+    private final TestDependencies testDependencies = new TestDependencies() {
+        @Override
+        public QRCodeGenerator providesQRCodeGenerator() {
+            return stubQRCodeGenerator;
+        }
+    };
     private final CollectTestRule rule = new CollectTestRule();
     private final StubQRCodeGenerator stubQRCodeGenerator = new StubQRCodeGenerator();
-    private final StubBarcodeViewDecoder stubBarcodeViewDecoder = new StubBarcodeViewDecoder();
-    private final TestScheduler testScheduler = new TestScheduler();
-
     @Rule
-    public RuleChain copyFormChain = TestRuleChain.chain()
-            .around(new ResetStateRule(new AppDependencyModule() {
-
-                @Override
-                public BarcodeViewDecoder providesBarcodeViewDecoder() {
-                    return stubBarcodeViewDecoder;
-                }
-
-                @Override
-                public QRCodeGenerator providesQRCodeGenerator(Context context) {
-                    return stubQRCodeGenerator;
-                }
-
-                @Override
-                public Scheduler providesScheduler(WorkManager workManager) {
-                    return testScheduler;
-                }
-            }))
+    public RuleChain copyFormChain = TestRuleChain.chain(testDependencies)
             .around(new RunnableRule(stubQRCodeGenerator::setup))
             .around(rule);
 
@@ -78,9 +57,9 @@ public class ConfigureWithQRCodeTest {
                 .clickProjectManagement()
                 .clickConfigureQR();
 
-        stubBarcodeViewDecoder.scan("{\"general\":{ \"server_url\": \"http://gallops.example\" },\"admin\":{}}");
+        testDependencies.getFakeBarcodeScannerViewFactory().scan("{\"general\":{ \"server_url\": \"http://gallops.example\" },\"admin\":{}}");
         qrCodePage
-                .checkIsToastWithMessageDisplayed(R.string.successfully_imported_settings)
+                .checkIsToastWithMessageDisplayed(org.odk.collect.strings.R.string.successfully_imported_settings)
                 .assertFileWithProjectNameUpdated("Demo project", "gallops.example");
 
         new MainMenuPage()
@@ -114,10 +93,10 @@ public class ConfigureWithQRCodeTest {
                 .clickProjectManagement()
                 .clickConfigureQR()
                 .clickView()
-                .clickOnString(R.string.qrcode_with_admin_password)
-                .clickOnString(R.string.admin_password)
-                .clickOnString(R.string.generate)
-                .assertText(R.string.qrcode_without_passwords);
+                .clickOnString(org.odk.collect.strings.R.string.qrcode_with_admin_password)
+                .clickOnString(org.odk.collect.strings.R.string.admin_password)
+                .clickOnString(org.odk.collect.strings.R.string.generate)
+                .assertText(org.odk.collect.strings.R.string.qrcode_without_passwords);
     }
 
     @Test
@@ -137,15 +116,15 @@ public class ConfigureWithQRCodeTest {
                 .clickProjectManagement()
                 .clickConfigureQR()
                 .clickView()
-                .clickOnString(R.string.qrcode_with_server_password)
-                .clickOnString(R.string.server_password)
-                .clickOnString(R.string.generate)
-                .assertText(R.string.qrcode_without_passwords);
+                .clickOnString(org.odk.collect.strings.R.string.qrcode_with_server_password)
+                .clickOnString(org.odk.collect.strings.R.string.server_password)
+                .clickOnString(org.odk.collect.strings.R.string.generate)
+                .assertText(org.odk.collect.strings.R.string.qrcode_without_passwords);
     }
 
     private static class StubQRCodeGenerator implements QRCodeGenerator {
 
-        private static final int CHECKER_BACKGROUND_DRAWABLE_ID = R.drawable.checker_background;
+        private static final int CHECKER_BACKGROUND_DRAWABLE_ID = com.rarepebble.colorpicker.R.drawable.checker_background;
 
         @Override
         public String generateQRCode(Collection<String> selectedPasswordKeys, AppConfigurationGenerator appConfigurationGenerator) {

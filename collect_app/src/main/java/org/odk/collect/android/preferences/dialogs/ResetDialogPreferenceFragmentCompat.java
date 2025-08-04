@@ -1,8 +1,10 @@
 package org.odk.collect.android.preferences.dialogs;
 
+import static org.odk.collect.android.fragments.dialogs.ResetSettingsResultDialog.RESET_SETTINGS_RESULT_DIALOG_TAG;
+import static org.odk.collect.android.projects.ProjectResetter.ResetAction.RESET_PREFERENCES;
+
 import android.content.Context;
 import android.content.DialogInterface;
-import android.graphics.Color;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.view.View;
@@ -13,11 +15,13 @@ import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.widget.AppCompatCheckBox;
 import androidx.preference.PreferenceDialogFragmentCompat;
 
+import org.odk.collect.analytics.Analytics;
 import org.odk.collect.android.R;
-import org.odk.collect.android.activities.CollectAbstractActivity;
+import org.odk.collect.android.analytics.AnalyticsEvents;
 import org.odk.collect.android.fragments.dialogs.ResetSettingsResultDialog;
 import org.odk.collect.android.injection.DaggerUtils;
-import org.odk.collect.android.utilities.ProjectResetter;
+import org.odk.collect.android.preferences.screens.ProjectPreferencesActivity;
+import org.odk.collect.android.projects.ProjectResetter;
 import org.odk.collect.androidshared.ui.DialogFragmentUtils;
 
 import java.util.ArrayList;
@@ -26,9 +30,6 @@ import java.util.List;
 import javax.inject.Inject;
 
 import timber.log.Timber;
-
-import static org.odk.collect.android.fragments.dialogs.ResetSettingsResultDialog.RESET_SETTINGS_RESULT_DIALOG_TAG;
-import static org.odk.collect.android.utilities.ProjectResetter.ResetAction.RESET_PREFERENCES;
 
 public class ResetDialogPreferenceFragmentCompat extends PreferenceDialogFragmentCompat implements CompoundButton.OnCheckedChangeListener {
 
@@ -102,6 +103,8 @@ public class ResetDialogPreferenceFragmentCompat extends PreferenceDialogFragmen
     }
 
     private void resetSelected() {
+        Analytics.log(AnalyticsEvents.RESET_PROJECT);
+
         final List<Integer> resetActions = new ArrayList<>();
 
         if (preferences.isChecked()) {
@@ -124,7 +127,7 @@ public class ResetDialogPreferenceFragmentCompat extends PreferenceDialogFragmen
             new AsyncTask<Void, Void, List<Integer>>() {
                 @Override
                 protected void onPreExecute() {
-                    DialogFragmentUtils.showIfNotShowing(ResetProgressDialog.class, ((CollectAbstractActivity) context).getSupportFragmentManager());
+                    DialogFragmentUtils.showIfNotShowing(ResetProgressDialog.class, ((ProjectPreferencesActivity) context).getSupportFragmentManager());
                 }
 
                 @Override
@@ -134,7 +137,7 @@ public class ResetDialogPreferenceFragmentCompat extends PreferenceDialogFragmen
 
                 @Override
                 protected void onPostExecute(List<Integer> failedResetActions) {
-                    DialogFragmentUtils.dismissDialog(ResetProgressDialog.class, ((CollectAbstractActivity) context).getSupportFragmentManager());
+                    DialogFragmentUtils.dismissDialog(ResetProgressDialog.class, ((ProjectPreferencesActivity) context).getSupportFragmentManager());
                     handleResult(resetActions, failedResetActions);
                 }
             }.execute();
@@ -147,47 +150,47 @@ public class ResetDialogPreferenceFragmentCompat extends PreferenceDialogFragmen
             switch (action) {
                 case RESET_PREFERENCES:
                     if (failedResetActions.contains(action)) {
-                        resultMessage.append(String.format(context.getString(R.string.reset_settings_result),
-                                context.getString(R.string.error_occured)));
+                        resultMessage.append(String.format(context.getString(org.odk.collect.strings.R.string.reset_settings_result),
+                                context.getString(org.odk.collect.strings.R.string.error_occured)));
                     } else {
-                        resultMessage.append(String.format(context.getString(R.string.reset_settings_result),
-                                context.getString(R.string.success)));
+                        resultMessage.append(String.format(context.getString(org.odk.collect.strings.R.string.reset_settings_result),
+                                context.getString(org.odk.collect.strings.R.string.success)));
                     }
                     break;
                 case ProjectResetter.ResetAction.RESET_INSTANCES:
                     if (failedResetActions.contains(action)) {
-                        resultMessage.append(String.format(context.getString(R.string.reset_saved_forms_result),
-                                context.getString(R.string.error_occured)));
+                        resultMessage.append(String.format(context.getString(org.odk.collect.strings.R.string.reset_saved_forms_result),
+                                context.getString(org.odk.collect.strings.R.string.error_occured)));
                     } else {
-                        resultMessage.append(String.format(context.getString(R.string.reset_saved_forms_result),
-                                context.getString(R.string.success)));
+                        resultMessage.append(String.format(context.getString(org.odk.collect.strings.R.string.reset_saved_forms_result),
+                                context.getString(org.odk.collect.strings.R.string.success)));
                     }
                     break;
                 case ProjectResetter.ResetAction.RESET_FORMS:
                     if (failedResetActions.contains(action)) {
-                        resultMessage.append(String.format(context.getString(R.string.reset_blank_forms_result),
-                                context.getString(R.string.error_occured)));
+                        resultMessage.append(String.format(context.getString(org.odk.collect.strings.R.string.reset_blank_forms_result),
+                                context.getString(org.odk.collect.strings.R.string.error_occured)));
                     } else {
-                        resultMessage.append(String.format(context.getString(R.string.reset_blank_forms_result),
-                                context.getString(R.string.success)));
+                        resultMessage.append(String.format(context.getString(org.odk.collect.strings.R.string.reset_blank_forms_result),
+                                context.getString(org.odk.collect.strings.R.string.success)));
                     }
                     break;
                 case ProjectResetter.ResetAction.RESET_CACHE:
                     if (failedResetActions.contains(action)) {
-                        resultMessage.append(String.format(context.getString(R.string.reset_cache_result),
-                                context.getString(R.string.error_occured)));
+                        resultMessage.append(String.format(context.getString(org.odk.collect.strings.R.string.reset_cache_result),
+                                context.getString(org.odk.collect.strings.R.string.error_occured)));
                     } else {
-                        resultMessage.append(String.format(context.getString(R.string.reset_cache_result),
-                                context.getString(R.string.success)));
+                        resultMessage.append(String.format(context.getString(org.odk.collect.strings.R.string.reset_cache_result),
+                                context.getString(org.odk.collect.strings.R.string.success)));
                     }
                     break;
                 case ProjectResetter.ResetAction.RESET_LAYERS:
                     if (failedResetActions.contains(action)) {
-                        resultMessage.append(String.format(context.getString(R.string.reset_layers_result),
-                                context.getString(R.string.error_occured)));
+                        resultMessage.append(String.format(context.getString(org.odk.collect.strings.R.string.reset_layers_result),
+                                context.getString(org.odk.collect.strings.R.string.error_occured)));
                     } else {
-                        resultMessage.append(String.format(context.getString(R.string.reset_layers_result),
-                                context.getString(R.string.success)));
+                        resultMessage.append(String.format(context.getString(org.odk.collect.strings.R.string.reset_layers_result),
+                                context.getString(org.odk.collect.strings.R.string.success)));
                     }
                     break;
             }
@@ -195,14 +198,14 @@ public class ResetDialogPreferenceFragmentCompat extends PreferenceDialogFragmen
                 resultMessage.append("\n\n");
             }
         }
-        if (!((CollectAbstractActivity) context).isInstanceStateSaved()) {
-            ((CollectAbstractActivity) context).runOnUiThread(() -> {
+        if (!((ProjectPreferencesActivity) context).isInstanceStateSaved()) {
+            ((ProjectPreferencesActivity) context).runOnUiThread(() -> {
                 if (resetActions.contains(RESET_PREFERENCES)) {
-                    ((CollectAbstractActivity) context).recreate();
+                    ((ProjectPreferencesActivity) context).recreate();
                 }
                 ResetSettingsResultDialog resetSettingsResultDialog = ResetSettingsResultDialog.newInstance(String.valueOf(resultMessage));
                 try {
-                    resetSettingsResultDialog.show(((CollectAbstractActivity) context).getSupportFragmentManager(), RESET_SETTINGS_RESULT_DIALOG_TAG);
+                    resetSettingsResultDialog.show(((ProjectPreferencesActivity) context).getSupportFragmentManager(), RESET_SETTINGS_RESULT_DIALOG_TAG);
                 } catch (ClassCastException e) {
                     Timber.i(e);
                 }
@@ -220,16 +223,8 @@ public class ResetDialogPreferenceFragmentCompat extends PreferenceDialogFragmen
         if (preferences.isChecked() || instances.isChecked() || forms.isChecked()
                 || layers.isChecked() || cache.isChecked()) {
             ((AlertDialog) getDialog()).getButton(AlertDialog.BUTTON_POSITIVE).setEnabled(true);
-            ((AlertDialog) getDialog()).getButton(AlertDialog.BUTTON_POSITIVE)
-                    .setTextColor(((AlertDialog) getDialog()).getButton(AlertDialog.BUTTON_NEGATIVE).getCurrentTextColor());
         } else {
             ((AlertDialog) getDialog()).getButton(AlertDialog.BUTTON_POSITIVE).setEnabled(false);
-            ((AlertDialog) getDialog()).getButton(AlertDialog.BUTTON_POSITIVE)
-                    .setTextColor(getPartiallyTransparentColor(((AlertDialog) getDialog()).getButton(AlertDialog.BUTTON_NEGATIVE).getCurrentTextColor()));
         }
-    }
-
-    private int getPartiallyTransparentColor(int color) {
-        return Color.argb(150, Color.red(color), Color.green(color), Color.blue(color));
     }
 }

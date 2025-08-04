@@ -1,6 +1,7 @@
 build
 .gradle
 .idea
+.kotlin
 local.properties
 *.iml
 .DS_Store
@@ -39,9 +40,6 @@ collect_app/.classpath
 collect_app/.project
 collect_app/.settings/
 
-# Submodules
-javarosa/
-
 # Config for the official ODK Collect build
 collect_app/src/odkCollectRelease/
 
@@ -53,3 +51,6 @@ collect_app/src/odkCollectRelease/
 # Robolectric dependencies
 robolectric-deps/
 **/robolectric-deps.properties
+
+.local-m2
+apks

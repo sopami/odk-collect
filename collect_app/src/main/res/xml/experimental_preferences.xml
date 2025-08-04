@@ -3,15 +3,29 @@
     android:title="@string/experimental">
 
     <Preference
-        android:icon="@drawable/ic_person_black_24dp"
-        android:title="@string/entities_title"
-        android:key="entities"
-        app:persistent="false"/>
-
-    <Preference
         android:icon="@drawable/ic_outline_settings_applications_accent_24"
-        android:title="@string/dev_tools"
         android:key="dev_tools"
-        app:persistent="false"/>
+        android:title="@string/dev_tools"
+        app:persistent="false" />
+
+    <SwitchPreference
+        android:key="mlkit_scanning"
+        android:title="@string/use_mlkit_for_barcode_scanning"
+        android:summary="@string/mlkit_is_always_used_for_scanning_project_qr_codes"
+        app:iconSpaceReserved="false" />
+
+    <PreferenceCategory
+        android:title="@string/entities_title"
+        app:allowDividerAbove="false"
+        app:allowDividerBelow="false"
+        app:iconSpaceReserved="false">
+
+        <Preference
+            android:key="entities"
+            android:title="@string/entity_browser_button"
+            app:iconSpaceReserved="false"
+            app:persistent="false" />
+
+    </PreferenceCategory>
 
 </PreferenceScreen>

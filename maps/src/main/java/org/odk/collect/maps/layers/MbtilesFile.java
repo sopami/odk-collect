@@ -28,6 +28,8 @@ import static android.database.sqlite.SQLiteDatabase.OPEN_READONLY;
  * See https://github.com/mapbox/mbtiles-spec for the detailed specification.
  */
 public class MbtilesFile implements Closeable, TileSource {
+    public static final String FILE_EXTENSION = ".mbtiles";
+
     public enum LayerType { RASTER, VECTOR }
 
     private final File file;
@@ -80,9 +82,6 @@ public class MbtilesFile implements Closeable, TileSource {
     }
 
     /** Fetches a tile out of the .mbtiles SQLite database. */
-    // PMD complains about returning null for an array return type, but we
-    // really do want to return null when there is no tile available.
-    @SuppressWarnings("PMD.ReturnEmptyArrayRatherThanNull")
     public byte[] getTileBlob(int zoom, int x, int y) {
         // TMS coordinates are used in .mbtiles files, so Y needs to be flipped.
         y = (1 << zoom) - 1 - y;
@@ -166,7 +165,7 @@ public class MbtilesFile implements Closeable, TileSource {
         if (!file.exists() || !file.isFile()) {
             throw new NotFileException(file);
         }
-        if (!file.getName().toLowerCase(Locale.US).endsWith(".mbtiles")) {
+        if (!file.getName().toLowerCase(Locale.US).endsWith(FILE_EXTENSION)) {
             throw new UnsupportedFilenameException(file);
         }
         try (SQLiteDatabase db = openSqliteReadOnly(file)) {

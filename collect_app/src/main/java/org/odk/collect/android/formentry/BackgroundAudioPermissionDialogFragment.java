@@ -13,10 +13,9 @@ import androidx.lifecycle.ViewModelProvider;
 
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
-import org.odk.collect.android.R;
 import org.odk.collect.android.injection.DaggerUtils;
-import org.odk.collect.permissions.PermissionsProvider;
 import org.odk.collect.permissions.PermissionListener;
+import org.odk.collect.permissions.PermissionsProvider;
 
 import javax.inject.Inject;
 
@@ -27,9 +26,13 @@ public class BackgroundAudioPermissionDialogFragment extends DialogFragment {
     @Inject
     PermissionsProvider permissionsProvider;
 
-    @Inject
-    BackgroundAudioViewModel.Factory viewModelFactory;
+    private final ViewModelProvider.Factory viewModelFactory;
+
     BackgroundAudioViewModel viewModel;
+
+    public BackgroundAudioPermissionDialogFragment(ViewModelProvider.Factory viewModelFactory) {
+        this.viewModelFactory = viewModelFactory;
+    }
 
     @Override
     public void onAttach(@NonNull Context context) {
@@ -45,8 +48,8 @@ public class BackgroundAudioPermissionDialogFragment extends DialogFragment {
 
         final FragmentActivity activity = requireActivity();
         return new MaterialAlertDialogBuilder(requireContext())
-                .setMessage(R.string.background_audio_permission_explanation)
-                .setPositiveButton(R.string.ok, (dialog, which) -> {
+                .setMessage(org.odk.collect.strings.R.string.background_audio_permission_explanation)
+                .setPositiveButton(org.odk.collect.strings.R.string.ok, (dialog, which) -> {
                     onOKClicked(activity);
                 })
                 .create();

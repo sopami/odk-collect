@@ -1,6 +1,8 @@
 package org.odk.collect.android.formmanagement;
 
 import org.junit.Test;
+import org.odk.collect.android.formmanagement.download.FormDownloadException;
+import org.odk.collect.android.formmanagement.download.FormDownloader;
 import org.odk.collect.android.formmanagement.matchexactly.ServerFormsSynchronizer;
 import org.odk.collect.forms.Form;
 import org.odk.collect.forms.FormSourceException;
@@ -24,7 +26,6 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-@SuppressWarnings("PMD.DoubleBraceInitialization")
 public class ServerFormsSynchronizerTest {
 
     private final FormsRepository formsRepository = new InMemFormsRepository();
