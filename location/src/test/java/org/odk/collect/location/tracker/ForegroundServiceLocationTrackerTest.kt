@@ -92,6 +92,18 @@ class ForegroundServiceLocationTrackerTest : LocationTrackerTest() {
         assertThat(locationClient.getRetainMockAccuracy(), equalTo(true))
         assertThat(locationClient.getUpdateInterval(), equalTo(2000L))
     }
+
+    @Test
+    fun start_whenNotificationIsFalse_doesNotStartServiceInForeground() {
+        locationTracker.start(
+            retainMockAccuracy = false,
+            updateInterval = null,
+            notification = false
+        )
+        runBackground()
+
+        assertThat(RobolectricHelpers.getForegroundServiceNotifications(), equalTo(emptyList()))
+    }
 }
 
 private class FakeLocationClient : LocationClient {
