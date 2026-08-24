@@ -57,6 +57,12 @@ class LocationTrackerService : Service(), LocationClient.LocationClientListener 
         super.onCreate()
         val provider = applicationContext as LocationDependencyComponentProvider
         provider.locationDependencyComponent.inject(this)
+
+        setupNotificationChannel()
+        startForeground(
+            uniqueIdGenerator.getInt(NOTIFICATION_IDENTIFIER),
+            createNotification()
+        )
     }
 
     override fun onBind(intent: Intent?): IBinder? {
@@ -64,12 +70,6 @@ class LocationTrackerService : Service(), LocationClient.LocationClientListener 
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        setupNotificationChannel()
-        startForeground(
-            uniqueIdGenerator.getInt(NOTIFICATION_IDENTIFIER),
-            createNotification()
-        )
-
         locationClient.setRetainMockAccuracy(
             intent?.getBooleanExtra(
                 EXTRA_RETAIN_MOCK_ACCURACY,
