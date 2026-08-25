@@ -10,6 +10,12 @@ import org.junit.After
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
+import org.mockito.Mockito.mock
+import org.mockito.kotlin.any
+import org.mockito.kotlin.argWhere
+import org.mockito.kotlin.eq
+import org.mockito.kotlin.never
+import org.mockito.kotlin.verify
 import org.odk.collect.location.Location
 import org.odk.collect.location.LocationClient
 import org.odk.collect.location.LocationClient.LocationClientListener
@@ -94,15 +100,37 @@ class ForegroundServiceLocationTrackerTest : LocationTrackerTest() {
     }
 
     @Test
+    fun start_whenNotificationIsTrue_startsServiceInForeground() {
+        val application = mock<Application>()
+        val locationTracker = ForegroundServiceLocationTracker(application)
+
+        locationTracker.start(
+            retainMockAccuracy = false,
+            updateInterval = null,
+            notification = true
+        )
+
+        verify(application, never()).startService(any())
+        verify(application).startForegroundService(
+            argWhere { it.getBooleanExtra(LocationTrackerService.EXTRA_NOTIFICATION, false) }
+        )
+    }
+
+    @Test
     fun start_whenNotificationIsFalse_doesNotStartServiceInForeground() {
+        val application = mock<Application>()
+        val locationTracker = ForegroundServiceLocationTracker(application)
+
         locationTracker.start(
             retainMockAccuracy = false,
             updateInterval = null,
             notification = false
         )
-        runBackground()
 
-        assertThat(RobolectricHelpers.getForegroundServiceNotifications(), equalTo(emptyList()))
+        verify(application, never()).startForegroundService(any())
+        verify(application).startService(
+            argWhere { !it.getBooleanExtra(LocationTrackerService.EXTRA_NOTIFICATION, false) }
+        )
     }
 }
 
