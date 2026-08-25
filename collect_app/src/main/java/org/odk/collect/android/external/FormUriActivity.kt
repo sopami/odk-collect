@@ -344,6 +344,7 @@ private class FormUriViewModel(
             return if (isLocAcquired) {
                 null
             } else {
+                Analytics.log(AnalyticsEvents.FORM_OPEN_DURING_UPDATE)
                 resources.getString(string.cannot_open_form_because_of_forms_update)
             }
         } else {
