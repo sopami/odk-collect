@@ -1,5 +1,7 @@
 package org.odk.collect.location.tracker
 
+import androidx.lifecycle.DefaultLifecycleObserver
+import androidx.lifecycle.LifecycleOwner
 import kotlinx.coroutines.flow.StateFlow
 import org.odk.collect.location.Location
 
@@ -17,7 +19,12 @@ interface LocationTracker {
     /**
      * @param updateInterval requested (not guaranteed) interval for location updates
      */
-    fun start(retainMockAccuracy: Boolean, updateInterval: Long? = null)
+    fun start(
+        retainMockAccuracy: Boolean,
+        updateInterval: Long? = null,
+        notification: Boolean = true
+    )
+
     fun start(retainMockAccuracy: Boolean) = start(retainMockAccuracy, null)
     fun start(updateInterval: Long?) = start(false, updateInterval)
     fun start() = start(false, null)
@@ -26,14 +33,27 @@ interface LocationTracker {
      * Stops tracking location. Does not reset the value returned by [LocationTracker.getCurrentLocation].
      */
     fun stop()
-
-    /**
-     * Allows another location provider to provide a location for this [LocationTracker] before
-     * [start] is called.
-     */
-    fun warm(location: Location?)
 }
 
 fun LocationTracker.getCurrentLocation(): Location? {
     return this.getLocation().value
+}
+
+fun LocationTracker.bindToLifecycle(
+    lifecycleOwner: LifecycleOwner,
+    retainMockAccuracy: Boolean = false
+) {
+    lifecycleOwner.lifecycle.addObserver(object : DefaultLifecycleObserver {
+        override fun onResume(owner: LifecycleOwner) {
+            start(
+                retainMockAccuracy = retainMockAccuracy,
+                updateInterval = null,
+                notification = false
+            )
+        }
+
+        override fun onPause(owner: LifecycleOwner) {
+            stop()
+        }
+    })
 }

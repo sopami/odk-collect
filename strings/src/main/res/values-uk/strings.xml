@@ -159,6 +159,13 @@
   <string name="open_file">Відкрити файл</string>
   <string name="rank_items">Засоби оцінки</string>
   <string name="invalid_range_widget">Цей віджет має некоректні параметри!</string>
+  <!--Content description for a horizontal slider used in range widgets-->
+  <!--Content description for a vertical slider used in range widgets-->
+  <!--Content description for the label showing the current value of the slider-->
+  <!--Content description for each tick mark on the slider indicating discrete steps-->
+  <!--Content description for the draggable thumb handle of the slider-->
+  <!--Content description for the label at the start (minimum) of the slider-->
+  <!--Content description for the label at the end (maximum) of the slider-->
   <string name="svg_file_does_not_exist">SVG файл не існує!</string>
   <string name="capture_image">Сфотографувати</string>
   <string name="choose_image">Оберіть зображення</string>
@@ -306,14 +313,6 @@
   <!--##############################################
     # GEO
     ##############################################-->
-  <!--TODO(ping): Delete these openmap_* strings when we're ready to move on from OSMDroid.
-   These strings are only being used to preserve compatibility with pre-existing
-    tile caches, and are not shown in the UI.-->
-  <string name="openmap_usgs_topo">USGS топографічна національна карта</string>
-  <string name="openmap_usgs_sat">USGS Національна мапа Гібрид</string>
-  <string name="openmap_usgs_img">USGS Національна мапа Картинки</string>
-  <string name="openmap_cartodb_positron">CartoDB Positron</string>
-  <string name="openmap_cartodb_darkmatter">CartoDB Dark Matter</string>
   <string name="basemap">Базова мапа</string>
   <string name="streets">Вулиці</string>
   <string name="terrain">Ландшафт</string>
@@ -335,7 +334,6 @@
   <!--Text for option where layer should be available to all projects-->
   <!--Text for option where layer should be available to the current project only-->
   <!--Text for message displayed in a dialog to confirm that the layer should be deleted. The placeholder is the name of the layer as displayed in the list-->
-  <string name="record_geopoint">Записати точку</string>
   <string name="provider_disabled_error">Вибачте! Джерела місцезнаходження не доступні!</string>
   <string name="google_play_services_not_available">Ця анкета хоче відслідковувати ваше розташування але Сервіси Google Play не доступні.</string>
   <string name="location_providers_disabled_dialog_message">Ця анкета хоче відслідковувати ваше розташування але розташування вимкнене. Будь ласка, увімкніть його в налаштуваннях Android.</string>
@@ -512,7 +510,6 @@
   <string name="change_password">Пароль ODK</string>
   <string name="password_error_whitespace">в паролях заборонені початкові та кінцеві пробіли</string>
   <string name="username_error_whitespace">в імені користувача заборонені початкові та кінцеві пробіли</string>
-  <string name="app_theme">Тема</string>
   <string name="language">Мова</string>
   <string name="use_device_language">Використовувати мову пристрою</string>
   <string name="font_size">Розмір шрифту</string>
@@ -740,6 +737,7 @@
   <!--##############################################
     # Crash handling
     ##############################################-->
+  <!--Message shown when the app crashed due to running out of memory last time it was run.-->
   <!--##############################################
     # Google Drive deprecation
     ##############################################-->

@@ -17,11 +17,13 @@ import org.odk.collect.android.javarosawrapper.JavaRosaFormController
 import org.odk.collect.android.utilities.FileUtils
 import org.odk.collect.android.utilities.FormUtils
 import org.odk.collect.entities.LocalEntityUseCases
+import org.odk.collect.entities.debug.EntityEvent
 import org.odk.collect.entities.storage.EntitiesRepository
 import org.odk.collect.forms.Form
 import org.odk.collect.forms.FormsRepository
 import org.odk.collect.forms.instances.Instance
 import org.odk.collect.forms.instances.InstancesRepository
+import org.odk.collect.shared.debug.DebugLogger
 import java.io.File
 
 object FormEntryUseCases {
@@ -122,7 +124,8 @@ object FormEntryUseCases {
     fun finalizeDraft(
         formController: FormController,
         instancesRepository: InstancesRepository,
-        entitiesRepository: EntitiesRepository
+        entitiesRepository: EntitiesRepository,
+        debugLogger: DebugLogger<EntityEvent>
     ): Instance? {
         val instance =
             getInstanceFromFormController(formController, instancesRepository)!!
@@ -131,7 +134,13 @@ object FormEntryUseCases {
         val valid = validationResult !is FailedValidationResult
 
         return if (valid) {
-            val newInstance = finalizeFormController(instance, formController, instancesRepository, entitiesRepository)
+            val newInstance = finalizeFormController(
+                instance,
+                formController,
+                instancesRepository,
+                entitiesRepository,
+                debugLogger
+            )
             saveFinalizedInstanceToDisk(formController)
             newInstance
         } else {
@@ -151,6 +160,7 @@ object FormEntryUseCases {
         formController: FormController,
         instancesRepository: InstancesRepository,
         entitiesRepository: EntitiesRepository,
+        debugLogger: DebugLogger<EntityEvent>
     ): Instance? {
         formController.finalizeForm()
 
@@ -158,7 +168,8 @@ object FormEntryUseCases {
         if (!instance.isEdit()) {
             LocalEntityUseCases.updateLocalEntitiesFromForm(
                 formEntities,
-                entitiesRepository
+                entitiesRepository,
+                debugLogger
             )
         }
 

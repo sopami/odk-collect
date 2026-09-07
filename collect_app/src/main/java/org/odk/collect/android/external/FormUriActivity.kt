@@ -17,6 +17,7 @@ import org.odk.collect.analytics.Analytics
 import org.odk.collect.android.R
 import org.odk.collect.android.activities.FormFillingActivity
 import org.odk.collect.android.analytics.AnalyticsEvents
+import org.odk.collect.android.analytics.AnalyticsUtils
 import org.odk.collect.android.formentry.FormOpeningMode
 import org.odk.collect.android.injection.DaggerUtils
 import org.odk.collect.android.instancemanagement.InstanceDeleter
@@ -28,6 +29,7 @@ import org.odk.collect.android.utilities.ContentUriHelper
 import org.odk.collect.android.utilities.FormsRepositoryProvider
 import org.odk.collect.android.utilities.InstancesRepositoryProvider
 import org.odk.collect.android.utilities.SavepointsRepositoryProvider
+import org.odk.collect.androidshared.ui.EdgeToEdge.setView
 import org.odk.collect.async.Scheduler
 import org.odk.collect.forms.savepoints.Savepoint
 import org.odk.collect.projects.ProjectsRepository
@@ -102,7 +104,7 @@ class FormUriActivity : LocalizedActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         DaggerUtils.getComponent(this).inject(this)
-        setContentView(R.layout.circular_progress_indicator)
+        setView(R.layout.circular_progress_indicator, false)
 
         if (savedInstanceState?.getBoolean(FORM_FILLING_ALREADY_STARTED) == true) {
             return
@@ -343,6 +345,7 @@ private class FormUriViewModel(
             return if (isLocAcquired) {
                 null
             } else {
+                AnalyticsUtils.logFormEvent(AnalyticsEvents.FORM_OPEN_DURING_UPDATE, form)
                 resources.getString(string.cannot_open_form_because_of_forms_update)
             }
         } else {

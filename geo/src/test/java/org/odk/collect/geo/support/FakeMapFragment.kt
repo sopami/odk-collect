@@ -1,21 +1,22 @@
 package org.odk.collect.geo.support
 
 import androidx.fragment.app.Fragment
-import org.odk.collect.maps.LineDescription
 import org.odk.collect.maps.MapFragment
 import org.odk.collect.maps.MapFragment.FeatureListener
 import org.odk.collect.maps.MapFragment.PointListener
 import org.odk.collect.maps.MapFragment.ReadyListener
 import org.odk.collect.maps.MapPoint
-import org.odk.collect.maps.PolygonDescription
+import org.odk.collect.maps.circles.CircleDescription
 import org.odk.collect.maps.markers.MarkerDescription
 import org.odk.collect.maps.markers.MarkerIconDescription
+import org.odk.collect.maps.traces.LineDescription
+import org.odk.collect.maps.traces.PolygonDescription
 import kotlin.random.Random
-class FakeMapFragment(private val ready: Boolean = false) : Fragment(), MapFragment {
 
+class FakeMapFragment(private val ready: Boolean = false) : Fragment(), MapFragment {
+    private var gpsLocationEnabled: Boolean = false
     private var clickListener: PointListener? = null
     private var gpsLocationListener: PointListener? = null
-    private var locationProvider: String? = null
     private var retainMockAccuracy = false
     private var center: MapPoint? = null
     private var zoom = 0.0
@@ -24,10 +25,11 @@ class FakeMapFragment(private val ready: Boolean = false) : Fragment(), MapFragm
     private var gpsLocation: MapPoint? = null
     private var featureClickListener: FeatureListener? = null
     private var dragListener: FeatureListener? = null
-    private val markers = mutableMapOf<Int, MapPoint>()
-    private val markerIcons = mutableMapOf<Int, MarkerIconDescription?>()
+    private val markers = mutableMapOf<Int, MarkerDescription>()
     private val polyLines = mutableMapOf<Int, LineDescription>()
     private val polygons = mutableMapOf<Int, PolygonDescription>()
+
+    private val circles = mutableMapOf<Int, CircleDescription>()
     private var hasCenter = false
     private val featureIds = mutableListOf<Int>()
     private var zoomLevelSetByUser: Float? = null
@@ -56,12 +58,17 @@ class FakeMapFragment(private val ready: Boolean = false) : Fragment(), MapFragm
     }
 
     override fun setCenter(center: MapPoint?, animate: Boolean) {
+        if (center == null) {
+            return
+        }
+
         this.center = center
         hasCenter = true
     }
 
     override fun zoomToCurrentLocation(center: MapPoint?) {
         this.center = center
+        this.hasCenter = true
         this.zoom = (zoomLevelSetByUser ?: MapFragment.POINT_ZOOM).toDouble()
     }
 
@@ -95,14 +102,11 @@ class FakeMapFragment(private val ready: Boolean = false) : Fragment(), MapFragm
         }
     }
 
-    override fun addMarker(markerDescription: MarkerDescription): Int {
-        val featureId = generateFeatureId()
-
-        markers[featureId] = markerDescription.point
-        markerIcons[featureId] = markerDescription.iconDescription
-
-        featureIds.add(featureId)
-        return featureId
+    override fun updateMarker(
+        featureId: Int,
+        markerDescription: MarkerDescription
+    ) {
+        markers[featureId] = markerDescription
     }
 
     override fun addMarkers(markers: List<MarkerDescription>): List<Int> {
@@ -111,12 +115,20 @@ class FakeMapFragment(private val ready: Boolean = false) : Fragment(), MapFragm
         }
     }
 
+    private fun addMarker(markerDescription: MarkerDescription): Int {
+        val featureId = generateFeatureId()
+
+        markers[featureId] = markerDescription
+        featureIds.add(featureId)
+        return featureId
+    }
+
     override fun setMarkerIcon(featureId: Int, markerIconDescription: MarkerIconDescription) {
-        markerIcons[featureId] = markerIconDescription
+        markers[featureId] = markers[featureId]!!.copy(iconDescription = markerIconDescription)
     }
 
     override fun getMarkerPoint(featureId: Int): MapPoint? {
-        return markers[featureId]
+        return markers[featureId]?.point
     }
 
     override fun addPolyLine(lineDescription: LineDescription): Int {
@@ -148,15 +160,40 @@ class FakeMapFragment(private val ready: Boolean = false) : Fragment(), MapFragm
         polygons[featureId] = polygonDescription
     }
 
+    override fun addCircle(circleDescription: CircleDescription): Int {
+        val featureId = generateFeatureId()
+        circles[featureId] = circleDescription
+        return featureId
+    }
+
+    override fun updateCircle(
+        featureId: Int,
+        circleDescription: CircleDescription
+    ) {
+        circles[featureId] = circleDescription
+    }
+
+    fun getCircles(): List<CircleDescription> {
+        return circles.values.toList()
+    }
+
     override fun getPolyPoints(featureId: Int): List<MapPoint> {
         return polyLines[featureId]?.points ?: polygons[featureId]?.points ?: emptyList()
     }
 
     override fun clearFeatures() {
         markers.clear()
-        markerIcons.clear()
         polyLines.clear()
         polygons.clear()
+        circles.clear()
+    }
+
+    override fun clearFeatures(ids: List<Int>) {
+        listOf(markers, polyLines, polygons).forEach {
+            ids.forEach { id ->
+                it.remove(id)
+            }
+        }
     }
 
     override fun setClickListener(listener: PointListener?) {
@@ -176,45 +213,8 @@ class FakeMapFragment(private val ready: Boolean = false) : Fragment(), MapFragm
         dragListener = listener
     }
 
-    override fun setGpsLocationEnabled(enabled: Boolean) {}
-    override fun getGpsLocation(): MapPoint? {
-        return gpsLocation
-    }
-
-    override fun getLocationProvider(): String? {
-        return locationProvider
-    }
-
-    override fun runOnGpsLocationReady(listener: ReadyListener) {}
-    override fun setGpsLocationListener(listener: PointListener?) {
-        gpsLocationListener = listener
-
-        gpsLocation?.let {
-            listener?.onPoint(it)
-        }
-    }
-
-    override fun setRetainMockAccuracy(retainMockAccuracy: Boolean) {
-        this.retainMockAccuracy = retainMockAccuracy
-    }
-
     override fun hasCenter(): Boolean {
         return hasCenter
-    }
-
-    fun setLocation(mapPoint: MapPoint?) {
-        gpsLocation = mapPoint
-        if (gpsLocationListener != null) {
-            gpsLocationListener!!.onPoint(mapPoint!!)
-        }
-    }
-
-    fun setLocationProvider(locationProvider: String?) {
-        this.locationProvider = locationProvider
-    }
-
-    fun isRetainMockAccuracy(): Boolean {
-        return retainMockAccuracy
     }
 
     fun clickOnFeature(index: Int) {
@@ -225,12 +225,12 @@ class FakeMapFragment(private val ready: Boolean = false) : Fragment(), MapFragm
         featureClickListener!!.onFeature(featureId)
     }
 
-    fun getMarkers(): List<MapPoint> {
+    fun getMarkers(): List<MarkerDescription> {
         return markers.values.toList()
     }
 
     fun getMarkerIcons(): List<MarkerIconDescription?> {
-        return markerIcons.values.toList()
+        return markers.values.map { it.iconDescription }
     }
 
     fun getZoomBoundingBox(): Pair<Iterable<MapPoint>, Double>? {
@@ -248,7 +248,7 @@ class FakeMapFragment(private val ready: Boolean = false) : Fragment(), MapFragm
     fun getFeatureId(points: List<MapPoint>): Int {
         return if (points.size == 1) {
             markers.entries.find {
-                it.value == points[0]
+                it.value.point == points[0]
             }!!.key
         } else {
             polyLines.entries.find {
@@ -276,6 +276,12 @@ class FakeMapFragment(private val ready: Boolean = false) : Fragment(), MapFragm
 
     fun dragPolyLine(featureId: Int, new: List<MapPoint>) {
         polyLines[featureId] = polyLines[featureId]!!.copy(points = new)
+        dragListener?.onFeature(featureId)
+    }
+
+    fun dragMarker(index: Int, destination: MapPoint) {
+        val featureId = featureIds[index]
+        markers[featureId] = markers[featureId]!!.copy(point = destination)
         dragListener?.onFeature(featureId)
     }
 }

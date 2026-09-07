@@ -18,7 +18,6 @@ import androidx.lifecycle.ViewModelProvider
 import org.odk.collect.android.activities.DeleteFormsActivity
 import org.odk.collect.android.activities.FormDownloadListActivity
 import org.odk.collect.android.activities.InstanceChooserList
-import org.odk.collect.android.application.MapboxClassInstanceCreator
 import org.odk.collect.android.databinding.MainMenuBinding
 import org.odk.collect.android.formentry.FormOpeningMode
 import org.odk.collect.android.formlists.blankformlist.BlankFormListActivity
@@ -28,9 +27,7 @@ import org.odk.collect.android.projects.ProjectIconView
 import org.odk.collect.android.projects.ProjectSettingsDialog
 import org.odk.collect.android.utilities.ActionRegister
 import org.odk.collect.androidshared.data.consume
-import org.odk.collect.androidshared.data.getState
 import org.odk.collect.androidshared.ui.DialogFragmentUtils
-import org.odk.collect.androidshared.ui.FragmentFactoryBuilder
 import org.odk.collect.androidshared.ui.SnackbarUtils
 import org.odk.collect.androidshared.ui.multiclicksafe.MultiClickGuard
 import org.odk.collect.strings.R.string
@@ -52,12 +49,6 @@ class MainMenuFragment(
         }
 
     override fun onAttach(context: Context) {
-        childFragmentManager.fragmentFactory = FragmentFactoryBuilder()
-            .forClass(MinSdkDeprecationBanner::class) {
-                MinSdkDeprecationBanner(context.getState(), webPageService)
-            }
-            .build()
-
         super.onAttach(context)
         val viewModelProvider = ViewModelProvider(requireActivity(), viewModelFactory)
         mainMenuViewModel = viewModelProvider[MainMenuViewModel::class.java]
@@ -85,7 +76,6 @@ class MainMenuFragment(
 
         val binding = MainMenuBinding.bind(view)
         initToolbar(binding)
-        initMapbox()
         initButtons(binding)
         initAppName(binding)
 
@@ -169,18 +159,6 @@ class MainMenuFragment(
     private fun initToolbar(binding: MainMenuBinding) {
         val toolbar = binding.root.findViewById<Toolbar>(org.odk.collect.androidshared.R.id.toolbar)
         (requireActivity() as AppCompatActivity).setSupportActionBar(toolbar)
-    }
-
-    private fun initMapbox() {
-        if (MapboxClassInstanceCreator.isMapboxAvailable()) {
-            childFragmentManager
-                .beginTransaction()
-                .add(
-                    org.odk.collect.android.R.id.map_box_initialization_fragment,
-                    MapboxClassInstanceCreator.createMapBoxInitializationFragment()!!
-                )
-                .commit()
-        }
     }
 
     private fun initButtons(binding: MainMenuBinding) {

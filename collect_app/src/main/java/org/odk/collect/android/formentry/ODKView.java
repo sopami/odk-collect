@@ -69,6 +69,7 @@ import org.odk.collect.android.utilities.FileUtils;
 import org.odk.collect.android.utilities.HtmlUtils;
 import org.odk.collect.android.utilities.QuestionMediaManager;
 import org.odk.collect.android.utilities.ThemeUtils;
+import org.odk.collect.android.widgets.MediaWidgetAnswerViewModel;
 import org.odk.collect.android.widgets.QuestionWidget;
 import org.odk.collect.android.widgets.StringWidget;
 import org.odk.collect.android.widgets.WidgetFactory;
@@ -161,7 +162,8 @@ public class ODKView extends SwipeHandler.View implements OnLongClickListener, W
             PrinterWidgetViewModel printerWidgetViewModel,
             InternalRecordingRequester internalRecordingRequester,
             ExternalAppRecordingRequester externalAppRecordingRequester,
-            LifecycleOwner viewLifecycle
+            LifecycleOwner viewLifecycle,
+            MediaWidgetAnswerViewModel mediaWidgetAnswerViewModel
     ) {
         super(context);
         updateQuestions(questionPrompts);
@@ -190,7 +192,8 @@ public class ODKView extends SwipeHandler.View implements OnLongClickListener, W
                 this.viewLifecycle,
                 new FileRequesterImpl(intentLauncher, externalAppIntentProvider, formController),
                 new StringRequesterImpl(intentLauncher, externalAppIntentProvider, formController),
-                formController
+                formController,
+                mediaWidgetAnswerViewModel
         );
 
         widgets = new ArrayList<>();
@@ -576,9 +579,27 @@ public class ODKView extends SwipeHandler.View implements OnLongClickListener, W
 
     public void focusToTopOf(@Nullable QuestionWidget qw) {
         if (qw != null && widgets.contains(qw)) {
-            findViewById(R.id.odk_view_container).scrollTo(0, qw.getTop());
-            qw.setFocus(getContext());
+            // focusToTopOf can be called synchronously just after the view has been added (before
+            // it has been laid out), in which case qw.getTop() would still be 0 and we'd scroll to
+            // the top instead of to the widget. Wait for an actual layout pass so getTop() is valid.
+            if (qw.isLaidOut() && !qw.isLayoutRequested()) {
+                scrollAndFocus(qw);
+            } else {
+                qw.addOnLayoutChangeListener(new View.OnLayoutChangeListener() {
+                    @Override
+                    public void onLayoutChange(View v, int left, int top, int right, int bottom,
+                                               int oldLeft, int oldTop, int oldRight, int oldBottom) {
+                        v.removeOnLayoutChangeListener(this);
+                        scrollAndFocus(qw);
+                    }
+                });
+            }
         }
+    }
+
+    private void scrollAndFocus(QuestionWidget qw) {
+        findViewById(R.id.odk_view_container).scrollTo(0, qw.getTop());
+        qw.setFocus(getContext());
     }
 
     /**

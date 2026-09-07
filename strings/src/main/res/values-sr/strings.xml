@@ -162,6 +162,13 @@
   <string name="rank_items">Rangiraj stavke</string>
   <string name="number_picker_title">Birač brojeva</string>
   <string name="invalid_range_widget">Ovaj widget ima nepravilne parametre!</string>
+  <!--Content description for a horizontal slider used in range widgets-->
+  <!--Content description for a vertical slider used in range widgets-->
+  <!--Content description for the label showing the current value of the slider-->
+  <!--Content description for each tick mark on the slider indicating discrete steps-->
+  <!--Content description for the draggable thumb handle of the slider-->
+  <!--Content description for the label at the start (minimum) of the slider-->
+  <!--Content description for the label at the end (maximum) of the slider-->
   <string name="svg_file_does_not_exist">SVG fajl ne postoji!</string>
   <string name="capture_image">Fotografiši</string>
   <string name="choose_image">Izaberi sliku</string>
@@ -309,14 +316,6 @@
   <!--##############################################
     # GEO
     ##############################################-->
-  <!--TODO(ping): Delete these openmap_* strings when we're ready to move on from OSMDroid.
-   These strings are only being used to preserve compatibility with pre-existing
-    tile caches, and are not shown in the UI.-->
-  <string name="openmap_usgs_topo">USGS National Map Topo</string>
-  <string name="openmap_usgs_sat">USCG National Map Hybrid</string>
-  <string name="openmap_usgs_img">USGC National Map Imagery</string>
-  <string name="openmap_cartodb_positron">CartoDB Positron</string>
-  <string name="openmap_cartodb_darkmatter">CartoDB Dark Matter</string>
   <string name="basemap">Osnovna mapa</string>
   <string name="streets">Ulice</string>
   <string name="terrain">Teren</string>
@@ -338,7 +337,6 @@
   <!--Text for option where layer should be available to all projects-->
   <!--Text for option where layer should be available to the current project only-->
   <!--Text for message displayed in a dialog to confirm that the layer should be deleted. The placeholder is the name of the layer as displayed in the list-->
-  <string name="record_geopoint">Zabilježi lokaciju</string>
   <string name="provider_disabled_error">Pronalaženje lokacije je isključeno!</string>
   <string name="google_play_services_not_available">Ovaj formular želi da prati vašu poziciju ali Google Play Services nisu dostupne.</string>
   <string name="location_providers_disabled_dialog_message">Ovaj formular želi da prati vašu lokaciju ali provajderi lokacije su isključeni. Molim uključite ih u podešavanjima Androida.</string>
@@ -512,7 +510,6 @@
   <string name="change_password">ODK Lozinka</string>
   <string name="password_error_whitespace">Prazan prostor na početku ili kraju nije dozvoljen kod lozinki</string>
   <string name="username_error_whitespace">Prazan prostor na početku ili kraju nije dozvoljen kod korisničkih imena</string>
-  <string name="app_theme">Tema</string>
   <string name="language">Jezik</string>
   <string name="use_device_language">Koristi jezik uređaja</string>
   <string name="font_size">Veličina teksta</string>
@@ -741,6 +738,7 @@
   <!--##############################################
     # Crash handling
     ##############################################-->
+  <!--Message shown when the app crashed due to running out of memory last time it was run.-->
   <!--##############################################
     # Google Drive deprecation
     ##############################################-->

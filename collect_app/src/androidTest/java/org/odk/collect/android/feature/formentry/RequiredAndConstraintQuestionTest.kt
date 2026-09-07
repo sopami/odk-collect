@@ -75,8 +75,8 @@ class RequiredAndConstraintQuestionTest {
             .clickGoToArrow()
             .clickGoToEnd()
             .clickOptionsIcon()
-            .clickOnString(R.string.validate)
-            .assertConstraintDisplayed("Custom message")
+            .clickOnString(R.string.validate, FormEntryPage("required_question_with_custom_error_message"))
+            .assertText("Custom message")
             .assertQuestion("Required question", true)
     }
 
@@ -88,10 +88,38 @@ class RequiredAndConstraintQuestionTest {
             .clickGoToArrow()
             .clickGoToEnd()
             .clickOptionsIcon()
-            .clickOnString(R.string.validate)
-            .assertConstraintDisplayed("Custom required message") // Make sure both questions are still displayed on the same screen
+            .clickOnString(R.string.validate, FormEntryPage("requiredQuestionInFieldList"))
+            .assertText("Custom required message") // Make sure both questions are still displayed on the same screen
             .assertQuestion("Foo", true)
             .assertQuestion("Bar", true)
+    }
+
+    @Test
+    // The required question we scroll to is intentionally NOT a text question. A text question
+    // contains an EditText that requests focus, and that requestFocus makes the framework
+    // automatically scroll it into view - which would mask a broken scroll and let this test pass
+    // even when the scrolling is broken. A non-text question (here select_one) has no such
+    // focusable input, so it actually verifies that we scroll to the question ourselves.
+    fun validatingFormByPressingValidateInOptionsMenu_scrollsToTheQuestionWithError_whenItIsAtTheEndOfALongFieldList() {
+        rule.startAtMainMenu()
+            .copyForm("longListOfQuestionsWithRequiredOneAtTheEnd.xml")
+            .startBlankForm("longListOfQuestionsWithRequiredOneAtTheEnd")
+            .clickOptionsIcon()
+            .clickOnString(R.string.validate, FormEntryPage("longListOfQuestionsWithRequiredOneAtTheEnd"))
+            .assertQuestion("Question 10", true)
+    }
+
+    @Test
+    fun validatingFormByPressingValidateInOptionsMenuOnFormEndScreen_displaysSuccessMessage() {
+        rule.startAtMainMenu()
+            .copyForm("required_question_with_custom_error_message.xml")
+            .startBlankForm("required_question_with_custom_error_message")
+            .answerQuestion("* Required question", "blah")
+            .swipeToEndScreen()
+            .clickOptionsIcon()
+            .clickOnString(R.string.validate)
+            .assertText(R.string.success_form_validation)
+            .assertTextDoesNotExist("Custom message")
     }
 
     @Test

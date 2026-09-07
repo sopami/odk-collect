@@ -134,6 +134,13 @@
   <!--Prompt under view finder to describe where to place the camera to scan a barcode-->
   <!--Label for button that rotates camera orientation when scanning barcodes-->
   <string name="invalid_range_widget">या विजेटमध्ये अवैध मापदंड आहेत!</string>
+  <!--Content description for a horizontal slider used in range widgets-->
+  <!--Content description for a vertical slider used in range widgets-->
+  <!--Content description for the label showing the current value of the slider-->
+  <!--Content description for each tick mark on the slider indicating discrete steps-->
+  <!--Content description for the draggable thumb handle of the slider-->
+  <!--Content description for the label at the start (minimum) of the slider-->
+  <!--Content description for the label at the end (maximum) of the slider-->
   <string name="capture_image">छायाचित्र काढा</string>
   <string name="choose_image">प्रतिमा निवडा</string>
   <string name="selected_invalid_image">निवडलेली फाईल वैध प्रतिमा नाही</string>
@@ -231,12 +238,6 @@
   <!--##############################################
     # GEO
     ##############################################-->
-  <!--TODO(ping): Delete these openmap_* strings when we're ready to move on from OSMDroid.
-   These strings are only being used to preserve compatibility with pre-existing
-    tile caches, and are not shown in the UI.-->
-  <string name="openmap_usgs_topo">यूएसजीएस राष्ट्रीय नकाशा टोपो</string>
-  <string name="openmap_cartodb_positron">कार्टो डीबी पॉझिट्रॉन</string>
-  <string name="openmap_cartodb_darkmatter">कार्टो डीबी गडद बाब</string>
   <string name="basemap">बेसमॅप</string>
   <string name="streets">रस्ते</string>
   <string name="terrain">भूप्रदेश</string>
@@ -582,6 +583,7 @@
   <!--##############################################
     # Crash handling
     ##############################################-->
+  <!--Message shown when the app crashed due to running out of memory last time it was run.-->
   <!--##############################################
     # Google Drive deprecation
     ##############################################-->

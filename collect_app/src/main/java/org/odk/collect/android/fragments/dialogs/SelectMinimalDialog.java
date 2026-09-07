@@ -1,6 +1,7 @@
 package org.odk.collect.android.fragments.dialogs;
 
 import static org.odk.collect.android.injection.DaggerUtils.getComponent;
+import static org.odk.collect.androidshared.ui.EdgeToEdge.applyBottomInsets;
 
 import android.content.Context;
 import android.os.Bundle;
@@ -8,6 +9,8 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 
+import androidx.activity.ComponentDialog;
+import androidx.activity.OnBackPressedCallback;
 import androidx.annotation.Nullable;
 import androidx.appcompat.widget.SearchView;
 import androidx.appcompat.widget.Toolbar;
@@ -75,8 +78,20 @@ public abstract class SelectMinimalDialog extends MaterialFullScreenDialogFragme
     @Override
     public void onViewCreated(@NotNull View view, Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
+
+        ((ComponentDialog) requireDialog()).getOnBackPressedDispatcher().addCallback(
+                getViewLifecycleOwner(),
+                new OnBackPressedCallback(true) {
+                    @Override
+                    public void handleOnBackPressed() {
+                        closeDialogAndSaveAnswers();
+                    }
+                }
+        );
+
         initRecyclerView();
         initToolbar();
+        applyBottomInsets(binding.choicesRecyclerView);
     }
 
     @Override
@@ -88,11 +103,6 @@ public abstract class SelectMinimalDialog extends MaterialFullScreenDialogFragme
 
     @Override
     protected void onCloseClicked() {
-        closeDialogAndSaveAnswers();
-    }
-
-    @Override
-    protected void onBackPressed() {
         closeDialogAndSaveAnswers();
     }
 

@@ -16,9 +16,9 @@ object EntityFormParser {
     }
 
     @JvmStatic
-    fun parseLabel(entity: TreeElement): String? {
+    fun parseLabel(entity: TreeElement): String {
         val labelElement = entity.getFirstChild(ELEMENT_LABEL)
-        return labelElement?.value?.uncast()?.string
+        return labelElement?.value?.uncast()?.string ?: ""
     }
 
     fun parseId(entity: TreeElement): String? {
@@ -68,7 +68,7 @@ object EntityFormParser {
         }
 
         return if (shouldCreate && shouldUpdate) {
-            null
+            EntityAction.UPSERT
         } else if (shouldCreate) {
             EntityAction.CREATE
         } else if (shouldUpdate) {

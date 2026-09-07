@@ -1,6 +1,5 @@
 plugins {
     alias(libs.plugins.androidLibrary)
-    alias(libs.plugins.kotlinAndroid)
 }
 
 apply(from = "../config/quality.gradle")
@@ -14,7 +13,6 @@ android {
         minSdk = libs.versions.minSdk.get().toInt()
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-        consumerProguardFiles("consumer-rules.pro")
     }
 
     buildTypes {
@@ -46,6 +44,8 @@ dependencies {
     implementation(project(":androidshared"))
     implementation(project(":strings"))
     implementation(libs.androidMaterial)
+    implementation(libs.gson)
+
     testImplementation(libs.junit)
     testImplementation(libs.hamcrest)
     testImplementation(libs.mockitoKotlin)
