@@ -130,6 +130,10 @@ AGP 8.13.0 (used by this project) requires **Android Studio Narwhal (2025.2.1)**
 
 **Never push directly to `master`.** All changes must go through a branch and pull request.
 
+> **Claude must never run `git push` commands.** Always hand push and PR creation steps to the user to run themselves.
+>
+> **Always use `gh pr create --repo sopami/odk-collect`** — never omit `--repo`, as the CLI may otherwise default to the upstream `getodk/collect` repo.
+
 ### Starting a change
 
 ```bash
@@ -157,21 +161,21 @@ git commit -m "chore: bump versionCode to XXXX for release vYYYY.MM"
 # 3. Tag the commit with the release version
 git tag vYYYY.MM
 
-# 4. Push branch and tag
+# 4. Push branch and tag — run these yourself
 git push -u origin <branch-name>
 git push origin vYYYY.MM
 ```
 
-If no — just push:
+If no — just push (run yourself):
 
 ```bash
 git push -u origin <branch-name>
 ```
 
-Then open the PR:
+Then open the PR (run yourself):
 
 ```bash
-gh pr create --title "..." --body "..."
+gh pr create --repo sopami/odk-collect --title "..." --body "..."
 ```
 
 ### Merging upstream releases
@@ -183,8 +187,13 @@ git checkout -b sync/upstream-vX.Y.Z
 git fetch upstream --tags
 git merge vX.Y.Z --no-ff -m "Merge upstream vX.Y.Z"
 # resolve conflicts (see upstream sync instructions above)
+```
+
+Then push and open the PR yourself:
+
+```bash
 git push -u origin sync/upstream-vX.Y.Z
-gh pr create --title "Sync upstream vX.Y.Z" --body "Merges ODK Collect vX.Y.Z into the fork."
+gh pr create --repo sopami/odk-collect --title "Sync upstream vX.Y.Z" --body "Merges ODK Collect vX.Y.Z into the fork."
 ```
 
 ## Key contacts / remotes
