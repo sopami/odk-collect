@@ -1,8 +1,8 @@
 plugins {
     alias(libs.plugins.androidLibrary)
-    alias(libs.plugins.kotlinAndroid)
-    alias(libs.plugins.kotlinKapt)
+    alias(libs.plugins.kotlinKsp)
     alias(libs.plugins.safeargsKotlin)
+    alias(libs.plugins.composeCompiler)
 }
 
 apply(from = "../config/quality.gradle")
@@ -16,7 +16,6 @@ android {
         minSdk = libs.versions.minSdk.get().toInt()
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-        consumerProguardFiles("consumer-rules.pro")
     }
 
     buildTypes {
@@ -49,10 +48,12 @@ dependencies {
     implementation(project(":strings"))
     implementation(project(":shared"))
     implementation(project(":androidshared"))
+    implementation(project(":analytics"))
     implementation(project(":material"))
     implementation(project(":async"))
     implementation(project(":lists"))
     implementation(project(":forms"))
+    implementation(project(":icons"))
 
     implementation(libs.kotlinStdlib)
     implementation(libs.javarosa) {
@@ -64,7 +65,15 @@ dependencies {
     implementation(libs.androidxNavigationFragmentKtx)
     implementation(libs.androidxNavigationUi)
     implementation(libs.dagger)
-    kapt(libs.daggerCompiler)
+    ksp(libs.daggerCompiler)
+
+    val composeBom = platform(libs.androidxComposeBom)
+    implementation(composeBom)
+    implementation(libs.androidXComposeMaterial)
+    implementation(libs.androidXConstraintLayoutCompose)
+    implementation(libs.runtime.livedata)
+    implementation(libs.androidXComposePreview)
+    debugImplementation(libs.androidXComposeTooling)
 
     testImplementation(project(":forms-test"))
     testImplementation(libs.junit)
@@ -72,4 +81,6 @@ dependencies {
     testImplementation(libs.hamcrest)
     testImplementation(libs.mockitoKotlin)
     testImplementation(libs.javarosa) // Include with all dependencies
+    testImplementation(libs.androidXComposeUiTestJunit4)
+    debugImplementation(libs.androidXComposeUiTestManifest)
 }

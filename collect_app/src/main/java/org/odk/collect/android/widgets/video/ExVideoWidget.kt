@@ -4,13 +4,11 @@ import android.annotation.SuppressLint
 import android.app.Activity
 import android.content.Context
 import android.view.View
-import androidx.activity.ComponentActivity
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.ComposeView
-import androidx.lifecycle.ViewModelProvider
-import androidx.lifecycle.viewmodel.viewModelFactory
+import androidx.compose.ui.platform.ViewCompositionStrategy
 import org.javarosa.core.model.data.IAnswerData
 import org.javarosa.core.model.data.StringData
 import org.javarosa.form.api.FormEntryPrompt
@@ -18,7 +16,6 @@ import org.odk.collect.android.formentry.questions.QuestionDetails
 import org.odk.collect.android.utilities.ApplicationConstants
 import org.odk.collect.android.utilities.FileUtils
 import org.odk.collect.android.utilities.QuestionMediaManager
-import org.odk.collect.android.widgets.MediaWidgetAnswerViewModel
 import org.odk.collect.android.widgets.QuestionWidget
 import org.odk.collect.android.widgets.interfaces.FileWidget
 import org.odk.collect.android.widgets.interfaces.WidgetDataReceiver
@@ -35,7 +32,7 @@ import java.io.File
 class ExVideoWidget(
     context: Context,
     questionDetails: QuestionDetails,
-    dependencies: Dependencies,
+    private val dependencies: Dependencies,
     private val questionMediaManager: QuestionMediaManager,
     private val waitingForDataRegistry: WaitingForDataRegistry,
     private val fileRequester: FileRequester
@@ -49,19 +46,11 @@ class ExVideoWidget(
     override fun onCreateWidgetView(context: Context, prompt: FormEntryPrompt, answerFontSize: Int): View {
         val readOnly = questionDetails.isReadOnly
         val buttonFontSize = QuestionFontSizeUtils.getFontSize(settings, QuestionFontSizeUtils.FontSize.BODY_LARGE)
-        val viewModelProvider = ViewModelProvider(
-            context as ComponentActivity,
-            viewModelFactory {
-                addInitializer(MediaWidgetAnswerViewModel::class) {
-                    MediaWidgetAnswerViewModel(scheduler, questionMediaManager, mediaUtils)
-                }
-            }
-        )
 
         return ComposeView(context).apply {
-            setContextThemedContent {
+            setContextThemedContent(ViewCompositionStrategy.DisposeOnDetachedFromWindowOrReleasedFromPool) {
                 ExVideoWidgetContent(
-                    viewModelProvider,
+                    dependencies.mediaWidgetAnswerViewModel,
                     formEntryPrompt,
                     binaryName,
                     readOnly,

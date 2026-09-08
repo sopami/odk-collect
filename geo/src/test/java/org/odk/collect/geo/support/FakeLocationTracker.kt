@@ -9,8 +9,10 @@ class FakeLocationTracker : LocationTracker {
 
     var currentLocation: Location? = null
         set(value) {
-            _currentLocation.value = value
-            field = value
+            if (isStarted) {
+                _currentLocation.value = value
+                field = value
+            }
         }
 
     var retainMockAccuracy: Boolean = false
@@ -25,7 +27,11 @@ class FakeLocationTracker : LocationTracker {
         return _currentLocation
     }
 
-    override fun start(retainMockAccuracy: Boolean, updateInterval: Long?) {
+    override fun start(
+        retainMockAccuracy: Boolean,
+        updateInterval: Long?,
+        notification: Boolean
+    ) {
         this.retainMockAccuracy = retainMockAccuracy
 
         isStarted = true
@@ -35,9 +41,5 @@ class FakeLocationTracker : LocationTracker {
     override fun stop() {
         isStarted = false
         _currentLocation.value = null
-    }
-
-    override fun warm(location: Location?) {
-        currentLocation = location
     }
 }

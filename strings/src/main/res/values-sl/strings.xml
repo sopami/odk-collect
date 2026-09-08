@@ -196,6 +196,13 @@
   <string name="rank_items">Razvrsti </string>
   <string name="number_picker_title">Izbirnik številk</string>
   <string name="invalid_range_widget">Ta widget ima neveljavne parametre!</string>
+  <!--Content description for a horizontal slider used in range widgets-->
+  <!--Content description for a vertical slider used in range widgets-->
+  <!--Content description for the label showing the current value of the slider-->
+  <!--Content description for each tick mark on the slider indicating discrete steps-->
+  <!--Content description for the draggable thumb handle of the slider-->
+  <!--Content description for the label at the start (minimum) of the slider-->
+  <!--Content description for the label at the end (maximum) of the slider-->
   <string name="svg_file_does_not_exist">SVG datoteka ne obstaja!</string>
   <string name="capture_image">Fotografiraj</string>
   <string name="choose_image">Izberi sliko</string>
@@ -385,14 +392,6 @@
   <!--##############################################
     # GEO
     ##############################################-->
-  <!--TODO(ping): Delete these openmap_* strings when we're ready to move on from OSMDroid.
-   These strings are only being used to preserve compatibility with pre-existing
-    tile caches, and are not shown in the UI.-->
-  <string name="openmap_usgs_topo">USGS National Map Topo</string>
-  <string name="openmap_usgs_sat">USGS National Map Hybrid</string>
-  <string name="openmap_usgs_img">USGS National Map Imagery</string>
-  <string name="openmap_cartodb_positron">CartoDB Positron</string>
-  <string name="openmap_cartodb_darkmatter">CartoDB Dark Matter</string>
   <string name="basemap">Basemap</string>
   <string name="basemap_source">Vir</string>
   <string name="basemap_source_unavailable">Oprostite, %s temeljne karte niso na voljo na tem napravi. Prosimo, izberite drugo temeljno karto v Nastavitve &gt; Zemljevidi.</string>
@@ -404,10 +403,10 @@
   <string name="light" tools:ignore="UnusedResources">Svetlost</string>
   <string name="dark" tools:ignore="UnusedResources">Temnost</string>
   <string name="outdoors" tools:ignore="UnusedResources">Na prostem</string>
-  <string name="topographic">Topografsko</string>
+  <string name="topographic" tools:ignore="UnusedResources">Topografsko</string>
   <string name="google_play_services_error_occured">Ne morem dostopati do Google Maps. Je nameščen Google Play Services?</string>
-  <string name="carto_map_style_positron">Positron</string>
-  <string name="carto_map_style_dark_matter">Dark Matter</string>
+  <string name="carto_map_style_positron" tools:ignore="UnusedResources">Positron</string>
+  <string name="carto_map_style_dark_matter" tools:ignore="UnusedResources">Dark Matter</string>
   <!--Title for the offline layer section of settings-->
   <!--Label for the offline layer setting-->
   <!--Title for the screen that allows the user to select a offline layer for maps-->
@@ -423,7 +422,6 @@
   <!--Text for option where layer should be available to all projects-->
   <!--Text for option where layer should be available to the current project only-->
   <!--Text for message displayed in a dialog to confirm that the layer should be deleted. The placeholder is the name of the layer as displayed in the list-->
-  <string name="record_geopoint">Posnemi točko</string>
   <string name="provider_disabled_error">Ponudniki lociranja so onemogočeni!</string>
   <string name="google_play_services_not_available">Ta obrazec želi uporabiti vašo lokacijo, vendar storitve Google Play niso na voljo.</string>
   <string name="location_providers_disabled_dialog_message">Ta obrazec želi uporabiti vašo lokacijo, vendar so ponudniki lokacije onemogočeni. Prosimo, omogočite jih v nastavitvah Androida.</string>
@@ -660,7 +658,6 @@
   <string name="change_password">ODk geslo</string>
   <string name="password_error_whitespace">Presledki na začetku ali na koncu gesla niso dovoljeni</string>
   <string name="username_error_whitespace">Presledki na začetku ali na koncu uporabniškega imena niso dovoljeni</string>
-  <string name="app_theme">Tema</string>
   <string name="language">Jezik</string>
   <string name="use_device_language">Uporabi jezik naprave</string>
   <string name="font_size">Velikost črk</string>
@@ -957,6 +954,7 @@
     ##############################################-->
   <string name="crash_last_run">Ob zadnjem delovanju aplikacije je prišlo do kritične napake in zaustavitve aplikacije!</string>
   <string name="cant_start_app">Ne morem zagnati aplikacije!</string>
+  <!--Message shown when the app crashed due to running out of memory last time it was run.-->
   <!--##############################################
     # Google Drive deprecation
     ##############################################-->

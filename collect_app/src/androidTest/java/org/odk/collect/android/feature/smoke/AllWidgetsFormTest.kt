@@ -6,6 +6,7 @@ import org.odk.collect.android.support.pages.FormEntryPage
 import org.odk.collect.android.support.rules.BlankFormTestRule
 import org.odk.collect.android.support.rules.TestRuleChain.chain
 import org.odk.collect.strings.R.string
+import org.odk.collect.testshared.AssertionFramework
 
 /**
  * Integration test that runs through a form with all question types.
@@ -37,13 +38,17 @@ class AllWidgetsFormTest {
             .swipeToNextQuestion("Range integer widget")
             .swipeToNextQuestion("Range decimal widget")
             .swipeToNextQuestion("Range vertical integer widget")
+
             .swipeToNextQuestion("Range picker integer widget")
+            .clickOnText("Select value")
+            .pressBack(FormEntryPage("All widgets"))
+
             .swipeToNextQuestion("Range rating integer widget")
 
             .swipeToNextQuestion("Image widget")
             .swipeToNextQuestion("Image widget without Choose button")
             .swipeToNextQuestion("Selfie widget")
-            .clickOnText("Take Picture")
+            .clickOnText("Take Picture", AssertionFramework.COMPOSE)
             .pressBack(FormEntryPage("All widgets"))
             .swipeToNextQuestion("Draw widget")
             .swipeToNextQuestion("Annotate widget")

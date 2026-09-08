@@ -7,19 +7,19 @@ references:
   android_config_small: &android_config_small
     working_directory: ~/work
     docker:
-      - image: cimg/android:2025.09
+      - image: cimg/android:2026.02
     resource_class: small
 
   android_config: &android_config
     working_directory: ~/work
     docker:
-      - image: cimg/android:2025.09
+      - image: cimg/android:2026.02
     resource_class: large
 
   android_config_large: &android_config_large
     working_directory: ~/work
     docker:
-      - image: cimg/android:2025.09
+      - image: cimg/android:2026.02
     resource_class: xlarge
 
   gcloud_config: &gcloud_config
@@ -33,6 +33,10 @@ jobs:
     <<: *android_config
     steps:
       - checkout
+      - run:
+          name: Validate Gradlew Wrapper
+          command: ./validate-gradle-wrapper.sh
+
       - restore_cache:
           keys:
             - compile-{{ checksum "gradle/libs.versions.toml" }}-{{ checksum "gradle/wrapper/gradle-wrapper.properties" }}
@@ -165,7 +169,7 @@ jobs:
 
       - run:
           name: Copy gradle config
-          command: mkdir -p ~/.gradle && cp .circleci/gradle.properties ~/.gradle/gradle.properties
+          command: mkdir -p ~/.gradle && cp .circleci/gradle-test-app.properties ~/.gradle/gradle.properties
 
       - run:
           name: Generate list of test classes

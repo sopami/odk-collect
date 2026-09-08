@@ -23,7 +23,7 @@ All branding changes relative to upstream are intentional and must be preserved 
 
 ## Syncing with upstream
 
-The upstream publishes stable releases as tags in the format `vYYYY.M.P` (e.g. `v2026.2.2`). Latest stable as of last sync: **v2026.2.2**.
+The upstream publishes stable releases as tags in the format `vYYYY.M.P` (e.g. `v2026.3.4`). Latest stable as of last sync: **v2026.3.4**.
 
 To sync with a new upstream release:
 

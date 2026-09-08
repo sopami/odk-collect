@@ -1,7 +1,7 @@
 package org.odk.collect.entities.javarosa.finalization
 
 import org.javarosa.core.model.instance.FormInstance
-import org.javarosa.core.model.instance.TreeElement
+import org.javarosa.core.model.instance.TreeReference
 import org.javarosa.form.api.FormEntryFinalizationProcessor
 import org.javarosa.form.api.FormEntryModel
 import org.odk.collect.entities.javarosa.parse.EntityFormExtra
@@ -19,28 +19,43 @@ class EntityFormFinalizationProcessor : FormEntryFinalizationProcessor {
             val saveTos = entityFormExtra.saveTos
 
             val entityElements = EntityFormParser.getEntityElements(mainInstance.getRoot())
-            val entities = entityElements.mapNotNull { entityElement ->
-                val action = EntityFormParser.parseAction(entityElement)
-                val dataset = EntityFormParser.parseDataset(entityElement)!!
+            val entitiesExtra = entityElements.fold(EntitiesExtra()) { extra, element ->
+                val action = EntityFormParser.parseAction(element)
+                val dataset = EntityFormParser.parseDataset(element)!!
+                val id = EntityFormParser.parseId(element)
+                val label = EntityFormParser.parseLabel(element)
 
-                if (action == EntityAction.CREATE || action == EntityAction.UPDATE) {
-                    createEntity(entityElement, dataset, saveTos, mainInstance, action)
+                if (action is EntityAction) {
+                    val entity = createEntity(
+                        dataset,
+                        id,
+                        label,
+                        element.ref,
+                        saveTos,
+                        action,
+                        mainInstance
+                    )
+
+                    extra.copy(entities = extra.entities + entity)
                 } else {
-                    null
+                    extra
                 }
             }
-            formEntryModel.extras.put(EntitiesExtra(entities))
+
+            formEntryModel.extras.put(entitiesExtra)
         }
     }
 
     private fun createEntity(
-        entityElement: TreeElement,
         dataset: String,
+        id: String?,
+        label: String,
+        elementRef: TreeReference,
         saveTos: List<SaveTo>,
-        mainInstance: FormInstance,
-        action: EntityAction
+        action: EntityAction,
+        mainInstance: FormInstance
     ): FormEntity {
-        val entityGroupRef = entityElement.ref.getParentRef().getParentRef()
+        val entityGroupRef = elementRef.getParentRef().getParentRef()
         val fields = saveTos.mapNotNull { saveTo ->
             if (!entityGroupRef.genericize().equals(saveTo.entityGroupReference)) {
                 null
@@ -49,7 +64,7 @@ class EntityFormFinalizationProcessor : FormEntryFinalizationProcessor {
                 val entityFieldRef = entityBindRef.contextualize(entityGroupRef)
 
                 val element = mainInstance.resolveReference(entityFieldRef)
-                if (element.isRelevant) {
+                if (element != null && element.isRelevant) {
                     val value = element.value?.uncast()?.string ?: ""
                     saveTo.value to value
                 } else {
@@ -58,8 +73,6 @@ class EntityFormFinalizationProcessor : FormEntryFinalizationProcessor {
             }
         }
 
-        val id = EntityFormParser.parseId(entityElement)
-        val label = EntityFormParser.parseLabel(entityElement)
         return FormEntity(action, dataset, id, label, fields)
     }
 }

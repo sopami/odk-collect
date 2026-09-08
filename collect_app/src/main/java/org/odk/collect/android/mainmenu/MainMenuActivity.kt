@@ -2,18 +2,26 @@ package org.odk.collect.android.mainmenu
 
 import android.os.Build
 import android.os.Bundle
+import androidx.appcompat.app.AppCompatDelegate
+import androidx.appcompat.app.AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM
+import androidx.appcompat.app.AppCompatDelegate.setDefaultNightMode
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.lifecycle.ViewModelProvider
+import com.google.android.gms.maps.MapView
 import org.odk.collect.android.R
 import org.odk.collect.android.activities.ActivityUtils
 import org.odk.collect.android.activities.CrashHandlerActivity
 import org.odk.collect.android.activities.FirstLaunchActivity
 import org.odk.collect.android.application.CollectComposeThemeProvider
+import org.odk.collect.android.application.MapboxClassInstanceCreator
+import org.odk.collect.android.application.initialization.MapsInitializer
 import org.odk.collect.android.injection.DaggerUtils
 import org.odk.collect.android.projects.ProjectSettingsDialog
 import org.odk.collect.android.utilities.ThemeUtils
+import org.odk.collect.androidshared.ui.EdgeToEdge.setView
 import org.odk.collect.androidshared.ui.FragmentFactoryBuilder
 import org.odk.collect.crashhandler.CrashHandler
+import org.odk.collect.crashhandler.hasCrashed
 import org.odk.collect.mobiledevicemanagement.MDMConfigObserver
 import org.odk.collect.permissions.PermissionsProvider
 import org.odk.collect.settings.SettingsProvider
@@ -37,6 +45,9 @@ class MainMenuActivity : LocalizedActivity(), CollectComposeThemeProvider {
 
     @Inject
     lateinit var webPageService: WebPageService
+
+    @Inject
+    lateinit var mapsInitializer: MapsInitializer
 
     private lateinit var currentProjectViewModel: CurrentProjectViewModel
 
@@ -66,7 +77,7 @@ class MainMenuActivity : LocalizedActivity(), CollectComposeThemeProvider {
         val viewModelProvider = ViewModelProvider(this, viewModelFactory)
         currentProjectViewModel = viewModelProvider[CurrentProjectViewModel::class.java]
 
-        ThemeUtils(this).setDarkModeForCurrentProject()
+        setDefaultNightMode(MODE_NIGHT_FOLLOW_SYSTEM)
 
         if (!currentProjectViewModel.hasCurrentProject()) {
             super.onCreate(null)
@@ -89,8 +100,10 @@ class MainMenuActivity : LocalizedActivity(), CollectComposeThemeProvider {
                 .build()
 
             super.onCreate(savedInstanceState)
-            setContentView(R.layout.main_menu_activity)
+            setView(R.layout.main_menu_activity, false)
             lifecycle.addObserver(mdmConfigObserver)
+
+            mapsInitializer.initializeUIComponents(this, R.id.map_box_initialization_fragment)
         }
     }
 

@@ -24,7 +24,9 @@ import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
 import android.os.Environment
+import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.junit4.createEmptyComposeRule
+import androidx.compose.ui.test.onNodeWithText
 import androidx.core.content.FileProvider
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.espresso.Espresso.onView
@@ -34,18 +36,14 @@ import androidx.test.espresso.assertion.ViewAssertions.doesNotExist
 import androidx.test.espresso.assertion.ViewAssertions.matches
 import androidx.test.espresso.intent.Intents.intending
 import androidx.test.espresso.intent.matcher.IntentMatchers.isInternal
-import androidx.test.espresso.matcher.ViewMatchers
 import androidx.test.espresso.matcher.ViewMatchers.isAssignableFrom
 import androidx.test.espresso.matcher.ViewMatchers.isDescendantOfA
 import androidx.test.espresso.matcher.ViewMatchers.isDisplayed
 import androidx.test.espresso.matcher.ViewMatchers.withClassName
-import androidx.test.espresso.matcher.ViewMatchers.withEffectiveVisibility
 import androidx.test.espresso.matcher.ViewMatchers.withId
-import androidx.test.espresso.matcher.ViewMatchers.withTagValue
 import androidx.test.espresso.matcher.ViewMatchers.withText
 import com.google.android.material.textfield.TextInputEditText
 import org.hamcrest.CoreMatchers
-import org.hamcrest.Matchers
 import org.hamcrest.core.StringEndsWith
 import org.junit.Rule
 import org.junit.Test
@@ -61,6 +59,7 @@ import org.odk.collect.android.widgets.DecimalWidget
 import org.odk.collect.android.widgets.IntegerWidget
 import org.odk.collect.android.widgets.StringWidget
 import org.odk.collect.androidtest.RecordedIntentsRule
+import org.odk.collect.androidtest.hasClickLabel
 import org.odk.collect.androidtest.onNodeWithClickLabel
 import org.odk.collect.strings.R
 import java.io.File
@@ -275,16 +274,18 @@ class IntentGroupTest {
     }
 
     private fun assertImageWidgetWithoutAnswer() {
-        onView(CoreMatchers.allOf(
-            withTagValue(Matchers.`is`("ImageView")),
-            withEffectiveVisibility(ViewMatchers.Visibility.VISIBLE)))
-            .check(doesNotExist())
+        val context = ApplicationProvider.getApplicationContext<Application>()
+        composeRule
+            .onNodeWithText(context.getString(R.string.capture_image))
+            .assertDoesNotExist()
 
-        onView(withId(org.odk.collect.android.R.id.capture_button))
-            .check(matches(CoreMatchers.not(isDisplayed())))
+        composeRule
+            .onNodeWithText(context.getString(R.string.choose_image))
+            .assertDoesNotExist()
 
-        onView(withId(org.odk.collect.android.R.id.choose_button))
-            .check(matches(CoreMatchers.not(isDisplayed())))
+        composeRule
+            .onNodeWithClickLabel(R.string.open_file)
+            .assertDoesNotExist()
     }
 
     private fun assertAudioWidgetWithoutAnswer() {
@@ -294,7 +295,7 @@ class IntentGroupTest {
 
     private fun assertVideoWidgetWithoutAnswer() {
         composeRule
-            .onNodeWithClickLabel(ApplicationProvider.getApplicationContext<Application>().getString(R.string.play_video))
+            .onNodeWithClickLabel(R.string.play_video)
             .assertDoesNotExist()
     }
 
@@ -304,17 +305,18 @@ class IntentGroupTest {
             .assertDoesNotExist()
     }
 
+    @OptIn(ExperimentalTestApi::class)
     private fun assertImageWidgetWithAnswer() {
-        onView(CoreMatchers.allOf(
-            withTagValue(Matchers.`is`("ImageView")),
-            withEffectiveVisibility(ViewMatchers.Visibility.VISIBLE)))
-            .check(matches(CoreMatchers.not(doesNotExist())))
+        val context = ApplicationProvider.getApplicationContext<Application>()
+        composeRule
+            .onNodeWithText(context.getString(R.string.capture_image))
+            .assertDoesNotExist()
 
-        onView(withId(org.odk.collect.android.R.id.capture_button))
-            .check(matches(CoreMatchers.not(isDisplayed())))
+        composeRule
+            .onNodeWithText(context.getString(R.string.choose_image))
+            .assertDoesNotExist()
 
-        onView(withId(org.odk.collect.android.R.id.choose_button))
-            .check(matches(CoreMatchers.not(isDisplayed())))
+        composeRule.waitUntilAtLeastOneExists(hasClickLabel(R.string.open_file))
     }
 
     private fun assertAudioWidgetWithAnswer() {
@@ -323,16 +325,14 @@ class IntentGroupTest {
             .check(matches(isDisplayed()))
     }
 
+    @OptIn(ExperimentalTestApi::class)
     private fun assertVideoWidgetWithAnswer() {
-        composeRule
-            .onNodeWithClickLabel(R.string.play_video)
-            .assertExists()
+        composeRule.waitUntilExactlyOneExists(hasClickLabel(R.string.play_video))
     }
 
+    @OptIn(ExperimentalTestApi::class)
     private fun assertFileWidgetWithAnswer() {
-        composeRule
-            .onNodeWithClickLabel(ApplicationProvider.getApplicationContext<Application>().getString(R.string.open_file))
-            .assertExists()
+        composeRule.waitUntilAtLeastOneExists(hasClickLabel(R.string.open_file))
     }
 
     @Throws(IOException::class)

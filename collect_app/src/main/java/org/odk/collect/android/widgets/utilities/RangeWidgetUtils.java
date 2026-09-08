@@ -4,17 +4,12 @@ import android.content.Context;
 import android.view.View;
 import android.widget.Button;
 
-import androidx.fragment.app.FragmentActivity;
-
 import org.javarosa.core.model.RangeQuestion;
 import org.javarosa.form.api.FormEntryPrompt;
 import org.odk.collect.android.databinding.RangePickerWidgetAnswerBinding;
-import org.odk.collect.android.fragments.dialogs.NumberPickerDialog;
 import org.odk.collect.androidshared.ui.ToastUtils;
 
 import java.math.BigDecimal;
-
-import timber.log.Timber;
 
 public class RangeWidgetUtils {
     private RangeWidgetUtils() {
@@ -30,15 +25,6 @@ public class RangeWidgetUtils {
         }
         if (prompt.isReadOnly()) {
             binding.widgetButton.setVisibility(View.GONE);
-        }
-    }
-
-    public static void showNumberPickerDialog(FragmentActivity activity, String[] displayedValuesForNumberPicker, int id, int progress) {
-        NumberPickerDialog dialog = NumberPickerDialog.newInstance(id, displayedValuesForNumberPicker, progress);
-        try {
-            dialog.show(activity.getSupportFragmentManager(), NumberPickerDialog.NUMBER_PICKER_DIALOG_TAG);
-        } catch (ClassCastException e) {
-            Timber.i(e);
         }
     }
 

@@ -2,20 +2,18 @@ package org.odk.collect.geo.geopoint
 
 import android.os.Bundle
 import androidx.lifecycle.ViewModelProvider
-import org.odk.collect.analytics.Analytics
 import org.odk.collect.androidshared.ui.DialogFragmentUtils
 import org.odk.collect.externalapp.ExternalAppUtils
 import org.odk.collect.geo.Constants.EXTRA_RETAIN_MOCK_ACCURACY
 import org.odk.collect.geo.GeoDependencyComponentProvider
 import org.odk.collect.geo.GeoUtils
-import org.odk.collect.geo.analytics.AnalyticsEvents
 import org.odk.collect.strings.localization.LocalizedActivity
 import javax.inject.Inject
 
 class GeoPointActivity : LocalizedActivity(), GeoPointDialogFragment.Listener {
 
     @Inject
-    internal lateinit var geoPointViewModelFactory: GeoPointViewModelFactory
+    internal lateinit var findLocationViewModelFactory: FindLocationViewModelFactory
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -23,11 +21,10 @@ class GeoPointActivity : LocalizedActivity(), GeoPointDialogFragment.Listener {
         (application as GeoDependencyComponentProvider).geoDependencyComponent.inject(this)
 
         val viewModel =
-            ViewModelProvider(this, geoPointViewModelFactory).get(GeoPointViewModel::class.java)
+            ViewModelProvider(this, findLocationViewModelFactory).get(FindLocationViewModel::class.java)
 
         viewModel.acceptedLocation.observe(this) {
             if (it != null) {
-                Analytics.log(AnalyticsEvents.SAVE_POINT_AUTO)
                 ExternalAppUtils.returnSingleValue(this, GeoUtils.formatLocationResultString(it))
             }
         }

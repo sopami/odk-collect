@@ -1,6 +1,8 @@
 package org.odk.collect.mapbox
 
 import android.content.Context
+import android.os.Handler
+import android.os.Looper
 import com.mapbox.geojson.Point
 import com.mapbox.maps.plugin.annotation.generated.OnPointAnnotationClickListener
 import com.mapbox.maps.plugin.annotation.generated.OnPointAnnotationDragListener
@@ -9,10 +11,10 @@ import com.mapbox.maps.plugin.annotation.generated.PointAnnotationManager
 import com.mapbox.maps.plugin.annotation.generated.PolylineAnnotation
 import com.mapbox.maps.plugin.annotation.generated.PolylineAnnotationManager
 import com.mapbox.maps.plugin.annotation.generated.PolylineAnnotationOptions
-import org.odk.collect.maps.LineDescription
+import org.odk.collect.maps.traces.LineDescription
 import org.odk.collect.maps.MapFragment
 import org.odk.collect.maps.MapPoint
-import org.odk.collect.maps.getMarkersForPoints
+import org.odk.collect.maps.traces.getMarkersForPoints
 
 internal class DynamicPolyLineFeature(
     private val context: Context,
@@ -23,6 +25,8 @@ internal class DynamicPolyLineFeature(
     private val featureDragEndListener: MapFragment.FeatureListener?,
     private val lineDescription: LineDescription
 ) : LineFeature {
+    private val mainHandler = Handler(Looper.getMainLooper())
+
     override val points: List<MapPoint>
         get() = _points.toList()
 
@@ -89,6 +93,7 @@ internal class DynamicPolyLineFeature(
                     .withPoints(points)
                     .withLineColor(lineDescription.getStrokeColor())
                     .withLineWidth(MapUtils.convertStrokeWidth(lineDescription))
+                    .withLineSortKey(MapUtils.sortKey(lineDescription.background))
             ).also {
                 polylineAnnotationManager.update(it)
             }
@@ -124,7 +129,11 @@ internal class DynamicPolyLineFeature(
             if (featureDragEndListener != null) {
                 for (pointAnnotation in pointAnnotations) {
                     if (annotation.id == pointAnnotation.id) {
-                        featureDragEndListener.onFeature(featureId)
+                        // Deferred to avoid ConcurrentModificationException caused by Mapbox iterating over
+                        // its annotation list while this callback disposes and recreates annotations.
+                        mainHandler.post {
+                            featureDragEndListener.onFeature(featureId)
+                        }
                         break
                     }
                 }

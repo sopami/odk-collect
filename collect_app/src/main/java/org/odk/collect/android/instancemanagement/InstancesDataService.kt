@@ -3,13 +3,16 @@ package org.odk.collect.android.instancemanagement
 import kotlinx.coroutines.flow.StateFlow
 import org.odk.collect.analytics.Analytics
 import org.odk.collect.android.analytics.AnalyticsEvents
+import org.odk.collect.android.analytics.AnalyticsUtils
 import org.odk.collect.android.application.Collect
 import org.odk.collect.android.backgroundwork.InstanceSubmitScheduler
 import org.odk.collect.android.formentry.FormEntryUseCases
 import org.odk.collect.android.formmanagement.CollectFormEntryControllerFactory
-import org.odk.collect.android.instancemanagement.autosend.FormAutoSendMode
-import org.odk.collect.android.instancemanagement.autosend.InstanceAutoSendFetcher
-import org.odk.collect.android.instancemanagement.autosend.getAutoSendMode
+import org.odk.collect.android.instancemanagement.send.InstanceSubmitter
+import org.odk.collect.android.instancemanagement.send.InstanceUploadResult
+import org.odk.collect.android.instancemanagement.send.autosend.FormAutoSendMode
+import org.odk.collect.android.instancemanagement.send.autosend.InstanceAutoSendFetcher
+import org.odk.collect.android.instancemanagement.send.autosend.getAutoSendMode
 import org.odk.collect.android.notifications.Notifier
 import org.odk.collect.android.projects.ProjectDependencyModule
 import org.odk.collect.android.state.DataKeys
@@ -18,9 +21,8 @@ import org.odk.collect.android.utilities.FormsUploadResultInterpreter
 import org.odk.collect.androidshared.data.AppState
 import org.odk.collect.androidshared.data.DataService
 import org.odk.collect.forms.Form
+import org.odk.collect.forms.FormsRepository
 import org.odk.collect.forms.instances.Instance
-import org.odk.collect.metadata.PropertyManager
-import org.odk.collect.openrosa.http.OpenRosaHttpInterface
 import org.odk.collect.projects.ProjectDependencyFactory
 import java.io.File
 
@@ -29,8 +31,7 @@ class InstancesDataService(
     private val instanceSubmitScheduler: InstanceSubmitScheduler,
     private val projectDependencyModuleFactory: ProjectDependencyFactory<ProjectDependencyModule>,
     private val notifier: Notifier,
-    private val propertyManager: PropertyManager,
-    private val httpInterface: OpenRosaHttpInterface,
+    private val instanceSubmitter: InstanceSubmitter,
     onUpdate: () -> Unit
 ) : DataService(appState, onUpdate) {
 
@@ -63,7 +64,10 @@ class InstancesDataService(
         )
     }
 
-    private val successfullySentCount by qualifiedData(DataKeys.INSTANCES_SUCCESSFULLY_SENT_COUNT, 0) { projectId ->
+    private val successfullySentCount by qualifiedData(
+        DataKeys.INSTANCES_SUCCESSFULLY_SENT_COUNT,
+        0
+    ) { projectId ->
         val projectDependencyModule = projectDependencyModuleFactory.create(projectId)
         val instancesRepository = projectDependencyModule.instancesRepository
         instancesRepository.getCountByStatus(Instance.STATUS_SUBMITTED)
@@ -78,7 +82,8 @@ class InstancesDataService(
     fun getEditableCount(projectId: String): StateFlow<Int> = editableCount.flow(projectId)
     fun getSendableCount(projectId: String): StateFlow<Int> = sendableCount.flow(projectId)
     fun getSentCount(projectId: String): StateFlow<Int> = sentCount.flow(projectId)
-    fun getSuccessfullySentCount(projectId: String): StateFlow<Int> = successfullySentCount.flow(projectId)
+    fun getSuccessfullySentCount(projectId: String): StateFlow<Int> =
+        successfullySentCount.flow(projectId)
 
     fun getInstances(projectId: String): StateFlow<List<Instance>> {
         return instances.flow(projectId)
@@ -90,6 +95,7 @@ class InstancesDataService(
         val formsRepository = projectDependencyModule.formsRepository
         val savepointsRepository = projectDependencyModule.savepointsRepository
         val entitiesRepository = projectDependencyModule.entitiesRepository
+        val debugLogger = projectDependencyModule.debugLogger
 
         val projectRootDir = File(projectDependencyModule.rootDir)
 
@@ -142,7 +148,8 @@ class InstancesDataService(
                         val finalizedInstance = FormEntryUseCases.finalizeDraft(
                             formController,
                             instancesRepository,
-                            entitiesRepository
+                            entitiesRepository,
+                            debugLogger
                         )
 
                         if (finalizedInstance == null) {
@@ -212,32 +219,60 @@ class InstancesDataService(
         }
     }
 
-    fun sendInstances(projectId: String, formAutoSend: Boolean = false): Boolean {
-        val projectDependencyModule =
-            projectDependencyModuleFactory.create(projectId)
+    fun sendInstances(
+        projectId: String,
+        instances: List<Instance>,
+        referrer: String,
+        overrideURL: String?,
+        cancelAfterAuthException: Boolean,
+        externalDeleteAfterUpload: Boolean?,
+        defaultSuccessMessage: String,
+        ensureActive: () -> Unit,
+        onProgress: (current: Int, total: Int) -> Unit = { _, _ -> }
+    ): List<InstanceUploadResult> {
+        val projectDependencyModule = projectDependencyModuleFactory.create(projectId)
 
-        val instanceSubmitter = InstanceSubmitter(
-            projectDependencyModule.formsRepository,
-            projectDependencyModule.generalSettings,
-            propertyManager,
-            httpInterface,
-            projectDependencyModule.instancesRepository
-        )
+        return projectDependencyModule.instancesLock.withLock { acquiredLock: Boolean ->
+            if (acquiredLock) {
+                instanceSubmitter.submitInstances(
+                    projectId,
+                    instances,
+                    referrer,
+                    overrideURL,
+                    cancelAfterAuthException,
+                    externalDeleteAfterUpload,
+                    defaultSuccessMessage,
+                    ensureActive,
+                    onProgress
+                ).also {
+                    logResults(projectDependencyModule.formsRepository, it, auto = false)
+                }
+            } else {
+                emptyList()
+            }
+        }
+    }
+
+    fun autoSendInstances(projectId: String, formAutoSend: Boolean): Boolean {
+        val projectDependencyModule = projectDependencyModuleFactory.create(projectId)
+        val formsRepository = projectDependencyModule.formsRepository
 
         return projectDependencyModule.instancesLock.withLock { acquiredLock: Boolean ->
             if (acquiredLock) {
                 val toUpload = InstanceAutoSendFetcher.getInstancesToAutoSend(
                     projectDependencyModule.instancesRepository,
-                    projectDependencyModule.formsRepository,
+                    formsRepository,
                     formAutoSend
                 )
 
                 if (toUpload.isNotEmpty()) {
-                    val results = instanceSubmitter.submitInstances(toUpload)
-                    notifier.onSubmission(results, projectDependencyModule.projectId)
+                    val uploadResults = instanceSubmitter.submitInstances(projectId, toUpload)
+                    logResults(formsRepository, uploadResults, auto = true)
+
+                    notifier.onSubmission(uploadResults, projectDependencyModule.projectId)
                     update(projectId)
 
-                    FormsUploadResultInterpreter.allFormsUploadedSuccessfully(results)
+                    FormsUploadResultInterpreter.allFormsUploadedSuccessfully(uploadResults)
                 } else {
                     true
                 }
@@ -264,6 +299,33 @@ class InstancesDataService(
             projectDependencyModule.instancesRepository,
             projectDependencyModule.formsRepository
         )
+    }
+
+    private fun logResults(
+        formsRepository: FormsRepository,
+        uploadResults: List<InstanceUploadResult>,
+        auto: Boolean
+    ) {
+        uploadResults.filterIsInstance<InstanceUploadResult.Success>().forEach {
+            val form = formsRepository.getLatestByFormIdAndVersion(
+                it.instance.formId,
+                it.instance.formVersion
+            )
+
+            if (form != null) {
+                val action = if (auto) {
+                    "HTTP auto"
+                } else {
+                    "HTTP"
+                }
+
+                val label = AnalyticsUtils.getFormHash(form)
+                Analytics.log(
+                    AnalyticsEvents.SUBMISSION,
+                    mapOf("action" to action, "label" to label)
+                )
+            }
+        }
     }
 }
 

@@ -8,7 +8,7 @@ import com.mapbox.maps.plugin.annotation.generated.PointAnnotationManager
 import com.mapbox.maps.plugin.annotation.generated.PointAnnotationOptions
 import org.odk.collect.maps.MapFragment
 import org.odk.collect.maps.MapPoint
-import org.odk.collect.maps.TraceDescription
+import org.odk.collect.maps.traces.TraceDescription
 import org.odk.collect.maps.markers.MarkerDescription
 import org.odk.collect.maps.markers.MarkerIconCreator.toBitmap
 
@@ -23,7 +23,7 @@ object MapUtils {
                 .withPoint(Point.fromLngLat(markerDescription.point.longitude, markerDescription.point.latitude, markerDescription.point.altitude))
                 .withIconImage(markerDescription.iconDescription.toBitmap(context))
                 .withIconSize(1.0)
-                .withSymbolSortKey(10.0)
+                .withSymbolSortKey(sortKey(markerDescription.iconDescription.background))
                 .withDraggable(markerDescription.isDraggable)
                 .withTextOpacity(0.0)
                 .withIconAnchor(getIconAnchorValue(markerDescription.iconAnchor))
@@ -40,7 +40,7 @@ object MapUtils {
                 .withPoint(Point.fromLngLat(it.point.longitude, it.point.latitude, it.point.altitude))
                 .withIconImage(it.iconDescription.toBitmap(context))
                 .withIconSize(1.0)
-                .withSymbolSortKey(10.0)
+                .withSymbolSortKey(sortKey(it.iconDescription.background))
                 .withDraggable(it.isDraggable)
                 .withTextOpacity(0.0)
                 .withIconAnchor(getIconAnchorValue(it.iconAnchor))
@@ -49,9 +49,13 @@ object MapUtils {
         return pointAnnotationManager.create(pointAnnotationOptionsList)
     }
 
-    private fun getIconAnchorValue(@MapFragment.Companion.IconAnchor iconAnchor: String): IconAnchor {
+    fun sortKey(background: Boolean): Double {
+        return if (background) 1.0 else 2.0
+    }
+
+    private fun getIconAnchorValue(iconAnchor: MapFragment.IconAnchor): IconAnchor {
         return when (iconAnchor) {
-            MapFragment.BOTTOM -> IconAnchor.BOTTOM
+            MapFragment.IconAnchor.BOTTOM -> IconAnchor.BOTTOM
             else -> IconAnchor.CENTER
         }
     }
@@ -63,8 +67,8 @@ object MapUtils {
         return MapPoint(pointAnnotation.point.latitude(), pointAnnotation.point.longitude(), 0.0, 0.0)
     }
 
-    // To ensure consistent stroke width across map platforms like Mapbox, Google, and OSM,
-    // the value for Mapbox needs to be divided by 3.
+    // To ensure consistent stroke width across map platforms like Mapbox etc., the value for
+    // Mapbox needs to be divided by 3.
     fun convertStrokeWidth(traceDescription: TraceDescription): Double {
         return (traceDescription.getStrokeWidth() / 3).toDouble()
     }

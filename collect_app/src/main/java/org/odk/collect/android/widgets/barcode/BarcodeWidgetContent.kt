@@ -9,14 +9,17 @@ import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.vectorResource
 import org.javarosa.form.api.FormEntryPrompt
+import org.odk.collect.android.widgets.MediaWidgetAnswerViewModel
 import org.odk.collect.android.widgets.WidgetAnswer
 import org.odk.collect.android.widgets.WidgetIconButton
 import org.odk.collect.androidshared.R.dimen
+import org.odk.collect.androidshared.ui.compose.marginStandard
 import org.odk.collect.icons.R
 import org.odk.collect.strings.R.string
 
 @Composable
 fun BarcodeWidgetContent(
+    mediaWidgetAnswerViewModel: MediaWidgetAnswerViewModel,
     formEntryPrompt: FormEntryPrompt,
     answer: String?,
     readOnly: Boolean,
@@ -43,10 +46,11 @@ fun BarcodeWidgetContent(
 
         if (!isAnswerHidden) {
             WidgetAnswer(
-                Modifier.padding(top = dimensionResource(id = dimen.margin_standard)),
+                Modifier.padding(top = marginStandard()),
                 formEntryPrompt,
                 answer,
                 answerFontSize,
+                mediaWidgetAnswerViewModel = mediaWidgetAnswerViewModel,
                 onLongClick = onLongClick
             )
         }

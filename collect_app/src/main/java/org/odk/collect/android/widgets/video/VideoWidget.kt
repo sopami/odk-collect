@@ -8,13 +8,11 @@ import android.content.Intent
 import android.provider.MediaStore
 import android.view.View
 import android.widget.Toast
-import androidx.activity.ComponentActivity
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.ComposeView
-import androidx.lifecycle.ViewModelProvider
-import androidx.lifecycle.viewmodel.viewModelFactory
+import androidx.compose.ui.platform.ViewCompositionStrategy
 import org.javarosa.core.model.data.IAnswerData
 import org.javarosa.core.model.data.StringData
 import org.javarosa.form.api.FormEntryPrompt
@@ -22,7 +20,6 @@ import org.odk.collect.android.formentry.questions.QuestionDetails
 import org.odk.collect.android.utilities.Appearances
 import org.odk.collect.android.utilities.ApplicationConstants.RequestCodes
 import org.odk.collect.android.utilities.QuestionMediaManager
-import org.odk.collect.android.widgets.MediaWidgetAnswerViewModel
 import org.odk.collect.android.widgets.QuestionWidget
 import org.odk.collect.android.widgets.interfaces.FileWidget
 import org.odk.collect.android.widgets.interfaces.WidgetDataReceiver
@@ -39,7 +36,7 @@ import java.io.File
 class VideoWidget(
     context: Context,
     questionDetails: QuestionDetails,
-    dependencies: Dependencies,
+    private val dependencies: Dependencies,
     private val questionMediaManager: QuestionMediaManager,
     private val waitingForDataRegistry: WaitingForDataRegistry
 ) : QuestionWidget(context, dependencies, questionDetails), FileWidget, WidgetDataReceiver {
@@ -53,19 +50,11 @@ class VideoWidget(
         val readOnly = questionDetails.isReadOnly
         val newVideoOnly = formEntryPrompt.appearanceHint?.lowercase()?.contains(Appearances.NEW) ?: false
         val buttonFontSize = QuestionFontSizeUtils.getFontSize(settings, QuestionFontSizeUtils.FontSize.BODY_LARGE)
-        val viewModelProvider = ViewModelProvider(
-            context as ComponentActivity,
-            viewModelFactory {
-                addInitializer(MediaWidgetAnswerViewModel::class) {
-                    MediaWidgetAnswerViewModel(scheduler, questionMediaManager, mediaUtils)
-                }
-            }
-        )
 
         return ComposeView(context).apply {
-            setContextThemedContent {
+            setContextThemedContent(ViewCompositionStrategy.DisposeOnDetachedFromWindowOrReleasedFromPool) {
                 VideoWidgetContent(
-                    viewModelProvider,
+                    dependencies.mediaWidgetAnswerViewModel,
                     formEntryPrompt,
                     binaryName,
                     readOnly,
@@ -88,6 +77,7 @@ class VideoWidget(
         }
     }
 
+    @Deprecated("Should be replaced by FileAnswerDelegate")
     override fun deleteFile() {
         questionMediaManager.deleteAnswerFile(
             formEntryPrompt.getIndex().toString(),
@@ -101,10 +91,12 @@ class VideoWidget(
         widgetValueChanged()
     }
 
+    @Deprecated("Should be replaced by FileAnswerDelegate")
     override fun getAnswer(): IAnswerData? {
         return binaryName?.let { StringData(it) }
     }
 
+    @Deprecated("Should be replaced by FileAnswerDelegate")
     override fun setData(answer: Any) {
         if (binaryName != null) {
             deleteFile()
